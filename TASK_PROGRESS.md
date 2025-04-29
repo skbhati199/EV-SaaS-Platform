@@ -5,7 +5,7 @@ This file tracks the progress of tasks defined in the TODO.md file for the EV Sa
 ## Current Progress
 
 ### Phase 1: Core Platform
-- [ ] Set up mono repo with TurboRepo
+- [x] Set up mono repo with TurboRepo
 - [ ] Setup PostgreSQL DB and schema migration (Flyway)
 - [ ] Implement Auth + EVSE registration
 - [ ] Integrate OCPP 1.6 backend
