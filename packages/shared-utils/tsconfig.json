@@ -11,6 +11,9 @@
     "strict": true,
     "moduleResolution": "node",
     "baseUrl": "./src",
+    "incremental": true,
+     "tsBuildInfoFile": "./.tsbuildinfo",
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
