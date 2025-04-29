@@ -25,6 +25,8 @@ packages/*/lib/
 packages/*/es/
 packages/*/.turbo/
 
+.turbo
+
 # === Java ===
 *.class
 *.jar
@@ -37,6 +39,8 @@ build/
 .mvn/
 *.log
 
+*.log.*
+
 # === IntelliJ / JetBrains IDEs ===
 .idea/
 *.iws
@@ -45,3 +49,4 @@ build/
 # === OS / System ===
 Thumbs.db
 .DS_Store
+.turbo/daemon/e095abefbcf3edc7-turbo.log.2025-04-29

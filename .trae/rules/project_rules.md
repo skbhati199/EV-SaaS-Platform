@@ -64,3 +64,50 @@
 - Use Slack, Teams, or Discord for all internal communication.
 - Avoid assumptions—document and communicate changes clearly.
 
+
+✅ PERMITTED USAGE
+Use AI assistants 
+
+Writing or refactoring boilerplate code.
+
+Generating unit/integration test scaffolding.
+
+Drafting documentation (README, Swagger, TODO.md).
+
+Providing example configurations (Docker, Kubernetes, etc.).
+
+Researching API usage, libraries, or tools.
+
+⚠️ GUIDELINES
+Always review and test AI-generated code before committing.
+
+Do not copy unverified suggestions directly into production code.
+
+Avoid AI-generated placeholders in committed code (e.g., TODO, dummy variables).
+
+Do not expose credentials, tokens, or internal architecture in AI prompts.
+
+Never use AI to write business-critical logic without a full peer review.
+
+❌ RESTRICTED USAGE
+Do not use AI to:
+
+Autogenerate security-sensitive components (e.g., authentication, encryption) without expert validation.
+
+Replace core architectural decisions.
+
+Answer legal, compliance, or licensing questions.
+
+Draft commits, code, or documentation containing company secrets or PII.
+
+📋 BEST PRACTICES
+When using AI:
+
+Use clear and specific prompts.
+
+Include relevant file paths or context when asking for help.
+
+Prefer solutions that align with project rules (e.g., Spring Boot 3, Next.js 14, Tailwind, Flyway).
+
+Include the assistant's contributions in code reviews.
+
