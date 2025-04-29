@@ -1,1 +1,47 @@
-/admin-portal/node-modules
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env*
+dist/
+lib/
+.eslintcache
+.next/
+coverage/
+.vscode/
+.DS_Store
+
+# === Admin Portal (Next.js App) ===
+/admin-portal/node_modules/
+/admin-portal/.next/
+/admin-portal/.env*
+
+# === Packages Workspace ===
+packages/*/node_modules/
+packages/*/dist/
+packages/*/lib/
+packages/*/es/
+packages/*/.turbo/
+
+# === Java ===
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+target/
+build/
+.gradle/
+.mvn/
+*.log
+
+# === IntelliJ / JetBrains IDEs ===
+.idea/
+*.iws
+*.ipr
+
+# === OS / System ===
+Thumbs.db
+.DS_Store
