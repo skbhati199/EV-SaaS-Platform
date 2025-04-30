@@ -1,4 +1,4 @@
-package com.ev.auth.model;
+package com.ev.station.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -12,34 +12,57 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "evses")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class EVSE {
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
     @Column(nullable = false, unique = true)
-    private String email;
+    private String evseId;
     
     @Column(nullable = false)
-    private String firstName;
+    private String serialNumber;
     
     @Column(nullable = false)
-    private String lastName;
+    private String model;
     
     @Column(nullable = false)
-    private String role;
+    private String manufacturer;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EVSEStatus status;
     
     @Column(nullable = false)
-    private String keycloakId;
+    private String location;
     
     @Column(nullable = false)
-    private boolean active;
+    private Double latitude;
+    
+    @Column(nullable = false)
+    private Double longitude;
+    
+    @Column(nullable = false)
+    private Double maxPower;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ConnectorType connectorType;
+    
+    @Column(nullable = false)
+    private UUID ownerId;
+    
+    @Column(nullable = false)
+    private LocalDateTime lastHeartbeat;
+    
+    @Column(nullable = false)
+    private String firmwareVersion;
     
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

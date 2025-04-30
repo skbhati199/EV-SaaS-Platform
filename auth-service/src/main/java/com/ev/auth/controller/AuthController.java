@@ -5,6 +5,7 @@ import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
 import com.ev.auth.dto.UserResponse;
 import com.ev.auth.service.AuthService;
+import com.ev.auth.service.KeycloakService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,38 +20,33 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final KeycloakService keycloakService;
     
-    /**
-     * Register a new user
-     * @param request Registration details
-     * @return User information
-     */
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Registering new user with email: {}", request.getEmail());
-        UserResponse response = authService.register(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        log.info("Received registration request for user: {}", request.getEmail());
+        UserResponse response = authService.registerUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
-    /**
-     * Authenticate a user and generate access tokens
-     * @param request Login credentials
-     * @return Authentication tokens
-     */
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user: {}", request.getEmail());
-        TokenResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        TokenResponse tokenResponse = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(tokenResponse);
     }
     
-    /**
-     * Get the current authenticated user
-     * @return User information
-     */
-    @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser() {
-        UserResponse response = authService.getCurrentUser();
-        return ResponseEntity.ok(response);
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refreshToken(@RequestParam String refreshToken) {
+        log.info("Token refresh request received");
+        TokenResponse tokenResponse = keycloakService.refreshToken(refreshToken);
+        return ResponseEntity.ok(tokenResponse);
+    }
+    
+    @GetMapping("/validate")
+    public ResponseEntity<Boolean> validateToken(@RequestParam String token) {
+        log.info("Token validation request received");
+        boolean isValid = keycloakService.validateToken(token);
+        return ResponseEntity.ok(isValid);
     }
 }
