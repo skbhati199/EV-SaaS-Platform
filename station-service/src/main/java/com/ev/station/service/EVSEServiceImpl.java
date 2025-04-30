@@ -100,9 +100,9 @@ public class EVSEServiceImpl implements EVSEService {
     }
     
     /**
-     * Maps an EVSE entity to its DTO representation
-     * @param evse The EVSE entity
-     * @return EVSE response DTO
+     * Maps an EVSE entity to EVSEResponse DTO
+     * @param evse EVSE entity
+     * @return EVSEResponse DTO
      */
     private EVSEResponse mapToEVSEResponse(EVSE evse) {
         return EVSEResponse.builder()

@@ -1,0 +1,40 @@
+# Server Configuration
+server.port=8081
+spring.application.name=auth-service
+
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5432/ev_auth
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.show-sql=false
+
+# Flyway Configuration
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
+
+# Keycloak Configuration
+keycloak.auth-server-url=http://localhost:8080/auth
+keycloak.realm=ev-saas
+keycloak.resource=auth-service
+keycloak.credentials.secret=your-client-secret
+keycloak.admin-username=admin
+keycloak.admin-password=admin
+keycloak.bearer-only=true
+keycloak.use-resource-role-mappings=true
+
+# Security Configuration
+spring.security.oauth2.resourceserver.jwt.issuer-uri=${keycloak.auth-server-url}/realms/${keycloak.realm}
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${keycloak.auth-server-url}/realms/${keycloak.realm}/protocol/openid-connect/certs
+
+# Logging Configuration
+logging.level.com.ev.auth=INFO
+logging.level.org.springframework.security=INFO
+
+# Actuator Configuration
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
