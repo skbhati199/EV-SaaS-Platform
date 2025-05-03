@@ -28,12 +28,19 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/refresh").permitAll()
                 .requestMatchers("/api/v1/auth/validate").permitAll()
                 
-                // Swagger / OpenAPI endpoints
+                // Swagger / OpenAPI endpoints for direct access
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/webjars/**").permitAll()
+                
+                // Swagger / OpenAPI endpoints accessed through API Gateway
+                .requestMatchers("/api/auth/v3/api-docs/**").permitAll()
+                .requestMatchers("/api/auth/swagger-ui/**").permitAll()
+                .requestMatchers("/api/auth/swagger-ui.html").permitAll()
+                .requestMatchers("/api/auth/swagger-resources/**").permitAll()
+                .requestMatchers("/api/auth/webjars/**").permitAll()
                 
                 // Actuator endpoints
                 .requestMatchers("/actuator/**").permitAll()

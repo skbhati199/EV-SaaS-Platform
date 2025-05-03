@@ -38,7 +38,9 @@ public class SecurityConfig {
                         // Swagger/OpenAPI endpoints for API Gateway
                         .pathMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/webjars/**").permitAll()
                         
-                        // Swagger/OpenAPI endpoints for individual services
+                        // Swagger/OpenAPI endpoints for individual services - explicitly include auth service
+                        .pathMatchers("/api/auth/v3/api-docs", "/api/auth/v3/api-docs/**").permitAll()
+                        .pathMatchers("/api/auth/swagger-ui/**", "/api/auth/swagger-ui.html").permitAll()
                         .pathMatchers("/api/*/v3/api-docs/**").permitAll()
                         .pathMatchers("/api/*/swagger-ui/**").permitAll()
                         .pathMatchers("/api/*/swagger-ui.html").permitAll()
@@ -49,7 +51,7 @@ public class SecurityConfig {
                         .pathMatchers("/ocpi/**").permitAll()
                         
                         // Actuator endpoints
-                        .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/info", "/actuator/gateway/**").permitAll()
                         
                         // All other routes require authentication
                         .anyExchange().authenticated()

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springdoc.core.models.GroupedOpenApi;
 
 import java.util.Arrays;
 import java.util.List;
@@ -40,8 +41,9 @@ public class OpenApiConfig {
                                 .url("https://www.evsaas.com/license"))
                         .termsOfService("https://www.evsaas.com/terms"))
                 .servers(Arrays.asList(
-                        new Server().url("http://localhost:" + serverPort).description("Local Development Server"),
-                        new Server().url("https://api.evsaas.com").description("Production Server")))
+                        new Server().url("http://localhost:" + serverPort).description("Local Direct Access"),
+                        new Server().url("http://localhost:8080/api/auth").description("Local API Gateway"),
+                        new Server().url("https://api.evsaas.com/api/auth").description("Production Server")))
                 .components(new Components()
                         .addSecuritySchemes("bearer-jwt", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
@@ -50,5 +52,14 @@ public class OpenApiConfig {
                                 .in(SecurityScheme.In.HEADER)
                                 .name("Authorization")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
+    }
+    
+    @Bean
+    public GroupedOpenApi publicApi() {
+        return GroupedOpenApi.builder()
+                .group("auth-service-public")
+                .pathsToMatch("/api/v1/auth/**")
+                .displayName("Auth Service API")
+                .build();
     }
 } 
