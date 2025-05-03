@@ -100,6 +100,96 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+
+  ## Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-auth
+    ports:
+      - "8081:8081"
+    depends_on:
+      timescaledb-postgis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8081
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=evsaas
+      - KEYCLOAK_RESOURCE=evsaas-client
+      - KEYCLOAK_SSL_REQUIRED=external
+      - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+
+  ## User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-user
+    ports:
+      - "8082:8082"
+    depends_on:
+      timescaledb-postgis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8082
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+
+  ## Billing Service
+  billing-service:
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-billing
+    ports:
+      - "8083:8083"
+    depends_on:
+      timescaledb-postgis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8083
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
 
 volumes:
   postgres_data:
