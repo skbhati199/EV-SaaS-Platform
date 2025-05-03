@@ -1,7 +1,36 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import {
+  LayoutDashboard,
+  Plug,
+  Users,
+  CreditCard,
+  Share2,
+  Zap,
+  Bell,
+  BarChart2,
+  Settings,
+  LogOut,
+  User,
+} from 'lucide-react';
+
+const navLinks = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/stations', label: 'Stations', icon: Plug },
+  { href: '/dashboard/users', label: 'Users', icon: Users },
+  { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
+  { href: '/dashboard/roaming', label: 'Roaming', icon: Share2 },
+  { href: '/dashboard/smart-charging', label: 'Smart Charging', icon: Zap },
+  { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart2 },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+];
 
 export default function DashboardLayout({
   children,
@@ -9,54 +38,64 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', current: pathname === '/dashboard' },
-    { name: 'Stations', href: '/dashboard/stations', current: pathname.startsWith('/dashboard/stations') },
-    { name: 'Users', href: '/dashboard/users', current: pathname.startsWith('/dashboard/users') },
-    { name: 'Reports', href: '/dashboard/reports', current: pathname.startsWith('/dashboard/reports') },
-    { name: 'Settings', href: '/dashboard/settings', current: pathname.startsWith('/dashboard/settings') },
-  ];
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">EV SaaS Platform</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Admin User</span>
-            <Link href="/login" className="text-sm text-red-600 hover:text-red-800">Logout</Link>
-          </div>
+    <div className="flex min-h-screen bg-gradient-green dark:bg-gradient-to-br dark:from-gray-900 dark:to-green-900">
+      <aside className="w-64 bg-white/90 dark:bg-gray-900/90 shadow-md flex flex-col">
+        <div className="h-16 flex items-center justify-between px-6 font-bold text-xl border-b border-gray-200 dark:border-gray-800">
+          <span>EV SaaS Admin</span>
+          <ThemeToggle />
         </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-sm h-[calc(100vh-4rem)] fixed">
-          <nav className="mt-5 px-2">
-            <div className="space-y-1">
-              {navigation.map((item) => (
+        <nav className="flex-1 py-4">
+          <ul className="space-y-1">
+            {navLinks.map(({ href, label, icon: Icon }) => (
+              <li key={href}>
                 <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`${
-                    item.current
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  } group flex items-center px-2 py-2 text-base font-medium rounded-md`}
+                  href={href}
+                  className={`flex items-center gap-3 px-6 py-2 rounded-l-full transition-colors ${
+                    pathname === href
+                      ? 'bg-accent text-white font-semibold'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-accent/20'
+                  }`}
                 >
-                  {item.name}
+                  <Icon className="w-5 h-5" />
+                  {label}
                 </Link>
-              ))}
-            </div>
-          </nav>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-start gap-2 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
-
-        {/* Main content */}
-        <div className="flex-1 pl-64">
+      </aside>
+      <div className="flex-1 flex flex-col">
+        <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-between px-8">
+          <h1 className="text-xl font-semibold">EV SaaS Platform</h1>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Admin User
+            </Button>
+          </div>
+        </header>
+        <main className="flex-1 p-8 overflow-auto">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/app/services';
 import { useAuthStore } from '@/app/store/authStore';
 import { RoleType } from '@/app/services/authService';
+
+const mockLogin = async (email: string, password: string) => {
+  // Mock authentication logic
+  return email === 'admin@example.com' && password === 'password123';
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,20 +26,14 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Use the auth service to login
-      await authService.login({ email, password });
-      
-      // Get user profile after successful login
-      const userProfile = await authService.getCurrentUser();
-      
-      // Store user profile in local storage
-      authService.saveUserToLocalStorage(userProfile);
-      
-      // Update global auth store
-      login(userProfile);
-      
-      // Redirect based on role
-      redirectBasedOnRole(userProfile.role);
+      const success = await mockLogin(email, password);
+      if (success) {
+        // Set a simple auth flag in localStorage (for demo)
+        localStorage.setItem('isAuthenticated', 'true');
+        router.push('/dashboard');
+      } else {
+        setError('Invalid credentials');
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Invalid email or password');
