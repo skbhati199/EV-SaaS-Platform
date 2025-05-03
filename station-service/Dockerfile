@@ -33,7 +33,7 @@ ENV SPRING_PROFILES_ACTIVE=docker
 ENV JAVA_OPTS=""
 
 # Expose the application port
-EXPOSE 8080
+EXPOSE 8084
 
 # Run the application with specific JVM options for containerization
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar"] 
