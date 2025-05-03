@@ -1,0 +1,136 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Auth Service Routes
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+        
+        # User Service Routes
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+        
+        # Station Service Routes
+        - id: station-service
+          uri: lb://station-service
+          predicates:
+            - Path=/api/stations/**
+          filters:
+            - StripPrefix=1
+        
+        # Roaming Service OCPI Routes (exposed externally)
+        - id: roaming-service-ocpi
+          uri: lb://roaming-service
+          predicates:
+            - Path=/ocpi/**
+          filters:
+            - OcpiAuthorizationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+            - name: CircuitBreaker
+              args:
+                name: roaming-service
+                fallbackUri: forward:/fallback/ocpi
+        
+        # Roaming Service Internal Routes
+        - id: roaming-service-internal
+          uri: lb://roaming-service
+          predicates:
+            - Path=/api/roaming/**
+          filters:
+            - StripPrefix=1
+        
+        # Billing Service Routes
+        - id: billing-service
+          uri: lb://billing-service
+          predicates:
+            - Path=/api/billing/**
+          filters:
+            - StripPrefix=1
+        
+        # Smart Charging Service Routes
+        - id: smart-charging
+          uri: lb://smart-charging
+          predicates:
+            - Path=/api/smart-charging/**
+          filters:
+            - StripPrefix=1
+        
+        # Notification Service Routes
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - StripPrefix=1
+
+  # Security config
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-service/oauth2/jwks
+
+# Eureka Discovery Service Config
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+# Resilience4j Circuit Breaker Config
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      roaming-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+
+# Timeout config
+spring.cloud.gateway.httpclient:
+  connect-timeout: 2000
+  response-timeout: 5s
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true 
