@@ -136,7 +136,7 @@ ev-saas-platform/
 │   ├── smart-charging/       # Demand response and smart charging
 │   ├── billing-service/      # Billing, CDRs, tariffs, Stripe/UPI etc.
 │   ├── notification-service/ # Kafka-based email/sms/push notification
-│   └── scheduler-service/    # Cron jobs, V2G, background tasks
+│   └── scheduler-service/    # Cron jobs, V2G, background tasks ✅
 │
 ├── libs/
 │   ├── common-utils/         # Shared Java/TS utility code
