@@ -1,77 +1,94 @@
 import { create } from 'zustand';
-
-type User = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-};
+import { authService, UserProfile } from '@/app/services';
 
 type AuthState = {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (user: UserProfile) => void;
+  logout: () => Promise<void>;
   clearError: () => void;
+  checkAuth: () => Promise<void>;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
 
-  login: async (email: string, _password: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      // In a real application, this would be an API call to the auth service
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      
-      // if (!response.ok) {
-      //   throw new Error('Invalid credentials');
-      // }
-      
-      // const data = await response.json();
-      
-      // Simulate successful login for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock user data
-      const mockUser = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        email,
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'ADMIN',
-      };
-      
-      set({ 
-        user: mockUser, 
-        isAuthenticated: true, 
-        isLoading: false,
-        error: null
-      });
-    } catch (err) {
-      set({ 
-        isLoading: false, 
-        error: err instanceof Error ? err.message : 'An error occurred during login' 
-      });
-    }
+  login: (user: UserProfile) => {
+    set({ 
+      user, 
+      isAuthenticated: true, 
+      isLoading: false,
+      error: null
+    });
   },
 
-  logout: () => {
-    // In a real application, this would also call an API endpoint to invalidate the session/token
-    set({ user: null, isAuthenticated: false, error: null });
+  logout: async () => {
+    set({ isLoading: true });
+    
+    try {
+      await authService.logout();
+      set({ 
+        user: null, 
+        isAuthenticated: false, 
+        isLoading: false,
+        error: null 
+      });
+    } catch (err) {
+      console.error('Logout error:', err);
+      set({ 
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'An error occurred during logout'
+      });
+    }
   },
 
   clearError: () => {
     set({ error: null });
   },
+
+  checkAuth: async () => {
+    // Skip if already authenticated
+    if (get().isAuthenticated) return;
+    
+    // Skip if no token
+    if (!authService.isAuthenticated()) return;
+    
+    set({ isLoading: true });
+    
+    try {
+      const user = await authService.getCurrentUser();
+      if (user) {
+        set({ 
+          user, 
+          isAuthenticated: true, 
+          isLoading: false,
+          error: null 
+        });
+      } else {
+        // Clear invalid token
+        await authService.logout();
+        set({ 
+          user: null, 
+          isAuthenticated: false, 
+          isLoading: false,
+          error: null 
+        });
+      }
+    } catch (err) {
+      console.error('Auth check error:', err);
+      // Clear invalid token
+      await authService.logout();
+      set({ 
+        user: null, 
+        isAuthenticated: false, 
+        isLoading: false,
+        error: null
+      });
+    }
+  }
 }));

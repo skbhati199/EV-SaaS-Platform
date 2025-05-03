@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { authService } from '@/app/services';
+import { useAuthStore } from '@/app/store/authStore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,24 +20,26 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // This would be replaced with actual authentication API call
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password }),
-      // });
+      // Use the auth service to login
+      await authService.login({ email, password });
       
-      // if (!response.ok) {
-      //   throw new Error('Login failed');
-      // }
+      // Get user profile after successful login
+      const userProfile = await authService.getCurrentUser();
       
-      // Simulate successful login for now
-      setTimeout(() => {
+      // Update global auth store
+      login(userProfile);
+      
+      // Redirect based on role
+      if (userProfile.role === 'ADMIN') {
         router.push('/dashboard');
-      }, 1000);
-    } catch (_err) {
-      // Using the error to set the error message
-      setError('Invalid email or password');
+      } else if (userProfile.role === 'OPERATOR') {
+        router.push('/dashboard/stations');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
