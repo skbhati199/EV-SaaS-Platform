@@ -10,11 +10,13 @@ This project is set up as a monorepo using TurboRepo, with the following structu
 .
 ├── admin-portal/         # Next.js 14 Admin UI
 ├── api-gateway/          # API Gateway service (Spring Boot)
+├── eureka-server/        # Eureka Server service (Spring Boot)
 ├── auth-service/         # Authentication service (Spring Boot)
 ├── billing-service/      # Billing management service (Spring Boot)
 ├── infra/                # Infrastructure configuration
 ├── notification-service/ # Notification handling service (Spring Boot)
 ├── packages/             # Shared packages and utilities
+├── libs/                 # Shared packages and utilities
 ├── roaming-service/      # OCPI implementation service (Spring Boot)
 ├── scheduler-service/    # Scheduling service (Spring Boot)
 ├── smart-charging/       # Smart charging algorithms (Spring Boot)
@@ -28,9 +30,17 @@ This project is set up as a monorepo using TurboRepo, with the following structu
 
 - Node.js (v18 or later)
 - Yarn (v1.22.19 or later)
-- Java 21
+- Java 17
 - Docker and Docker Compose
 - PostgreSQL
+- Redis
+- Kafka microservices
+- TimescaleDB
+- Keycloak
+- OCPP/OCPI protocol implementation
+- Next.js 14 (admin console, user console)
+- GitBook (for documentation)
+- TurboRepo (for monorepo management)
 
 ### Setup
 
