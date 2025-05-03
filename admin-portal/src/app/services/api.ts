@@ -84,7 +84,7 @@ export class ApiService {
   private handleError(error: any): Error {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
-      const errorMessage = axiosError.response?.data?.message || axiosError.message;
+      const errorMessage = (axiosError.response?.data as any)?.message || axiosError.message;
       return new Error(errorMessage);
     }
     return error;

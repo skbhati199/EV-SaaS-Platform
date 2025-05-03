@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/app/services';
 import { useAuthStore } from '@/app/store/authStore';
+import { RoleType } from '@/app/services/authService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -26,22 +27,38 @@ export default function LoginPage() {
       // Get user profile after successful login
       const userProfile = await authService.getCurrentUser();
       
+      // Store user profile in local storage
+      authService.saveUserToLocalStorage(userProfile);
+      
       // Update global auth store
       login(userProfile);
       
       // Redirect based on role
-      if (userProfile.role === 'ADMIN') {
-        router.push('/dashboard');
-      } else if (userProfile.role === 'OPERATOR') {
-        router.push('/dashboard/stations');
-      } else {
-        router.push('/dashboard');
-      }
+      redirectBasedOnRole(userProfile.role);
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const redirectBasedOnRole = (role: RoleType) => {
+    switch (role) {
+      case 'ADMIN':
+        router.push('/dashboard');
+        break;
+      case 'OPERATOR':
+        router.push('/dashboard/stations');
+        break;
+      case 'BILLING_ADMIN':
+        router.push('/dashboard/billing');
+        break;
+      case 'SUPPORT':
+        router.push('/dashboard/support');
+        break;
+      default:
+        router.push('/dashboard');
     }
   };
 
@@ -132,7 +149,7 @@ export default function LoginPage() {
           <p>
             Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Contact your administrator
+              Register now
             </Link>
           </p>
         </div>

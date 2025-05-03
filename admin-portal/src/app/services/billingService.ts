@@ -89,6 +89,27 @@ export interface PaymentInitiateResponse {
   amount: number;
   currency: string;
   provider: PaymentProvider;
+  apiKey?: string; // Public key for the provider
+}
+
+export interface RazorpayVerificationRequest {
+  paymentId: string;
+  orderId: string;
+  signature: string;
+}
+
+export interface RazorpayInitiateRecurringRequest {
+  customerId: string;
+  planId: string;
+  totalCount: number;
+  currency: string;
+  amount: number;
+  description?: string;
+}
+
+export interface StripeSetupIntentResponse {
+  clientSecret: string;
+  setupIntentId: string;
 }
 
 class BillingService extends ApiService {
@@ -141,17 +162,31 @@ class BillingService extends ApiService {
     return this.post<PaymentInitiateResponse>('/payments/initiate', paymentRequest);
   }
 
-  async verifyRazorpayPayment(paymentId: string, orderId: string, signature: string): Promise<Invoice> {
-    return this.post<Invoice>('/payments/razorpay/verify', {
-      paymentId,
-      orderId,
-      signature
-    });
+  async verifyRazorpayPayment(request: RazorpayVerificationRequest): Promise<Invoice> {
+    return this.post<Invoice>('/payments/razorpay/verify', request);
   }
 
   async confirmStripePayment(paymentIntentId: string): Promise<Invoice> {
     return this.post<Invoice>('/payments/stripe/confirm', {
       paymentIntentId
+    });
+  }
+  
+  // Stripe-specific methods
+  async createStripeSetupIntent(): Promise<StripeSetupIntentResponse> {
+    return this.post<StripeSetupIntentResponse>('/payments/stripe/setup-intent');
+  }
+  
+  // Razorpay-specific methods
+  async initiateRazorpayRecurring(request: RazorpayInitiateRecurringRequest): Promise<PaymentInitiateResponse> {
+    return this.post<PaymentInitiateResponse>('/payments/razorpay/recurring', request);
+  }
+  
+  async createRazorpayCustomer(name: string, email: string, contact: string): Promise<{ customerId: string }> {
+    return this.post<{ customerId: string }>('/payments/razorpay/customer', {
+      name,
+      email,
+      contact
     });
   }
 
@@ -178,6 +213,27 @@ class BillingService extends ApiService {
   async changePlan(subscriptionId: string, newPlanId: string): Promise<Subscription> {
     return this.post<Subscription>(`/subscriptions/${subscriptionId}/change-plan`, {
       newPlanId
+    });
+  }
+  
+  // Analytics & Reporting
+  async getBillingStats(startDate: string, endDate: string): Promise<{
+    totalRevenue: number;
+    newSubscriptions: number;
+    activeSubscriptions: number;
+    averageInvoiceAmount: number;
+  }> {
+    return this.get('/analytics/stats', {
+      params: { startDate, endDate }
+    });
+  }
+  
+  async getRevenueByPeriod(period: 'day' | 'week' | 'month', startDate: string, endDate: string): Promise<{
+    periods: string[];
+    revenue: number[];
+  }> {
+    return this.get('/analytics/revenue', {
+      params: { period, startDate, endDate }
     });
   }
 }

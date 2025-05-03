@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authService } from '@/app/services';
+import { authService, RoleType } from '@/app/services';
 import { useAuthStore } from '@/app/store/authStore';
 
 export default function RegisterPage() {
@@ -13,13 +13,14 @@ export default function RegisterPage() {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    role: 'USER' as RoleType,
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuthStore();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -46,23 +47,44 @@ export default function RegisterPage() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        // Default role is USER, admin would assign other roles
-        role: 'USER'
+        role: formData.role
       });
       
       // Get user profile after successful registration
       const userProfile = await authService.getCurrentUser();
       
+      // Store user in local storage
+      authService.saveUserToLocalStorage(userProfile);
+      
       // Update global auth store
       login(userProfile);
       
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on role
+      redirectBasedOnRole(formData.role);
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const redirectBasedOnRole = (role: RoleType) => {
+    switch (role) {
+      case 'ADMIN':
+        router.push('/dashboard');
+        break;
+      case 'OPERATOR':
+        router.push('/dashboard/stations');
+        break;
+      case 'BILLING_ADMIN':
+        router.push('/dashboard/billing');
+        break;
+      case 'SUPPORT':
+        router.push('/dashboard/support');
+        break;
+      default:
+        router.push('/dashboard');
     }
   };
 
@@ -131,6 +153,26 @@ export default function RegisterPage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="you@example.com"
               />
+            </div>
+            
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              >
+                <option value="USER">User</option>
+                <option value="CUSTOMER">Customer</option>
+                <option value="OPERATOR">Operator</option>
+                <option value="ADMIN">Administrator</option>
+                <option value="BILLING_ADMIN">Billing Administrator</option>
+                <option value="SUPPORT">Support</option>
+              </select>
             </div>
 
             <div>

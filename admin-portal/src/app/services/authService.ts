@@ -10,8 +10,10 @@ export interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
-  role?: string;
+  role?: RoleType;
 }
+
+export type RoleType = 'ADMIN' | 'OPERATOR' | 'USER' | 'CUSTOMER' | 'BILLING_ADMIN' | 'SUPPORT';
 
 export interface TokenResponse {
   accessToken: string;
@@ -25,7 +27,7 @@ export interface UserProfile {
   email: string;
   firstName: string;
   lastName: string;
-  role: string;
+  role: RoleType;
   createdAt: string;
   updatedAt: string;
 }
@@ -106,6 +108,29 @@ class AuthService extends ApiService {
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!localStorage.getItem('token');
+  }
+  
+  // Check if user has required role
+  hasRole(requiredRoles: RoleType | RoleType[]): boolean {
+    const user = this.getCurrentUserSync();
+    if (!user) return false;
+    
+    if (Array.isArray(requiredRoles)) {
+      return requiredRoles.includes(user.role);
+    }
+    
+    return user.role === requiredRoles;
+  }
+  
+  // Get current user from local storage (sync)
+  getCurrentUserSync(): UserProfile | null {
+    const userJson = localStorage.getItem('user');
+    return userJson ? JSON.parse(userJson) : null;
+  }
+  
+  // Save user to local storage
+  saveUserToLocalStorage(user: UserProfile): void {
+    localStorage.setItem('user', JSON.stringify(user));
   }
 }
 
