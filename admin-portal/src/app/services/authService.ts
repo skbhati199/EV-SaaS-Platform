@@ -1,28 +1,10 @@
-import { ApiService } from './api';
+import { ApiService, apiService } from './api';
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+// User roles in the system
+export type RoleType = 'ADMIN' | 'OPERATOR' | 'BILLING_ADMIN' | 'SUPPORT' | 'USER';
 
-export interface RegisterData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: RoleType;
-}
-
-export type RoleType = 'ADMIN' | 'OPERATOR' | 'USER' | 'CUSTOMER' | 'BILLING_ADMIN' | 'SUPPORT';
-
-export interface TokenResponse {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-  refreshToken?: string;
-}
-
-export interface UserProfile {
+// User model
+export interface User {
   id: string;
   email: string;
   firstName: string;
@@ -32,106 +14,107 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// Authentication response from the server
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+// Login request parameters
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+// Register request parameters
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+// Password reset request
+export interface PasswordResetRequest {
+  email: string;
+}
+
+// Change password request
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
+// Authentication service class extending the base API service
 class AuthService extends ApiService {
   constructor() {
     super();
-    // Use auth-service as base URL
-    this.api.defaults.baseURL = `${this.api.defaults.baseURL}/api/auth`;
+    // Use auth-service endpoint as base URL for auth requests
+    this.api.defaults.baseURL = `${this.api.defaults.baseURL}/auth`;
   }
 
-  // Login user and get JWT token
-  async login(credentials: LoginCredentials): Promise<TokenResponse> {
-    const response = await this.post<TokenResponse>('/login', credentials);
+  // Login with email and password
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
+    const response = await this.post<AuthResponse>('/login', credentials);
     
-    // Store token in localStorage
-    if (response.accessToken) {
-      localStorage.setItem('token', response.accessToken);
-      if (response.refreshToken) {
-        localStorage.setItem('refreshToken', response.refreshToken);
-      }
-    }
+    // Store token and auth state
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('isAuthenticated', 'true');
     
     return response;
   }
 
-  // Register new user
-  async register(userData: RegisterData): Promise<TokenResponse> {
-    const response = await this.post<TokenResponse>('/register', userData);
+  // Register a new user
+  async register(userData: RegisterRequest): Promise<AuthResponse> {
+    const response = await this.post<AuthResponse>('/register', userData);
     
-    // Store token in localStorage if registration automatically logs in
-    if (response.accessToken) {
-      localStorage.setItem('token', response.accessToken);
-      if (response.refreshToken) {
-        localStorage.setItem('refreshToken', response.refreshToken);
-      }
-    }
-    
-    return response;
-  }
-
-  // Get current user profile
-  async getCurrentUser(): Promise<UserProfile> {
-    return this.get<UserProfile>('/me');
-  }
-
-  // Refresh JWT token
-  async refreshToken(): Promise<TokenResponse> {
-    const refreshToken = localStorage.getItem('refreshToken');
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-    
-    const response = await this.post<TokenResponse>('/refresh', { refreshToken });
-    
-    if (response.accessToken) {
-      localStorage.setItem('token', response.accessToken);
-      if (response.refreshToken) {
-        localStorage.setItem('refreshToken', response.refreshToken);
-      }
-    }
+    // Store token and auth state
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('isAuthenticated', 'true');
     
     return response;
   }
 
   // Logout user
-  async logout(): Promise<void> {
-    try {
-      await this.post('/logout');
-    } finally {
-      // Clear stored tokens
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-    }
+  logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
   }
 
-  // Check if user is authenticated
+  // Get current user profile
+  async getCurrentUser(): Promise<User> {
+    return this.get<User>('/me');
+  }
+
+  // Request password reset
+  async requestPasswordReset(data: PasswordResetRequest): Promise<void> {
+    await this.post<void>('/password-reset', data);
+  }
+
+  // Change password
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await this.post<void>('/change-password', data);
+  }
+
+  // Helper method to check if user is authenticated
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
-  }
-  
-  // Check if user has required role
-  hasRole(requiredRoles: RoleType | RoleType[]): boolean {
-    const user = this.getCurrentUserSync();
-    if (!user) return false;
-    
-    if (Array.isArray(requiredRoles)) {
-      return requiredRoles.includes(user.role);
+    if (typeof window === 'undefined') {
+      return false;
     }
-    
-    return user.role === requiredRoles;
+    return localStorage.getItem('isAuthenticated') === 'true';
   }
-  
-  // Get current user from local storage (sync)
-  getCurrentUserSync(): UserProfile | null {
-    const userJson = localStorage.getItem('user');
-    return userJson ? JSON.parse(userJson) : null;
-  }
-  
-  // Save user to local storage
-  saveUserToLocalStorage(user: UserProfile): void {
-    localStorage.setItem('user', JSON.stringify(user));
+
+  // Mock login for development (use only in development)
+  async mockLogin(email: string, password: string): Promise<boolean> {
+    // This is a simple mock for development
+    if (email === 'skbhati199@gmail.com' && password === 'admin123') {
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('token', 'mock-jwt-token');
+      return true;
+    }
+    return false;
   }
 }
 
-export default new AuthService(); 
+// Export a singleton instance
+export const authService = new AuthService(); 

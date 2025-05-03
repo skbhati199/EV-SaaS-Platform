@@ -23,7 +23,6 @@ install.sh
 # === Admin Portal (Next.js App) ===
 /admin-portal/node_modules/
 /admin-portal/.next/
-/admin-portal/.env*
 
 # === Packages Workspace ===
 packages/*/node_modules/

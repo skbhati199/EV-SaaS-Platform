@@ -1,146 +1,96 @@
 import { ApiService } from './api';
-import { PaginatedResponse } from './userService';
 
-export interface StationLocation {
-  latitude: number;
-  longitude: number;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  postalCode: string;
-}
-
+// Type definitions for station data
 export interface Connector {
   id: string;
-  connectorNumber: number;
-  type: string;
-  status: string;
+  type: string; // Type 2, CCS, CHAdeMO, etc.
   maxPower: number;
-  currentPower?: number;
-  lastUpdated?: string;
+  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'UNAVAILABLE' | 'FAULTED';
+  lastStatusUpdate?: string;
 }
 
 export interface Station {
   id: string;
   name: string;
-  serialNumber: string;
-  model: string;
-  manufacturer: string;
-  location: StationLocation;
+  location: {
+    address: string;
+    city: string;
+    zipCode: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  };
+  status: 'ONLINE' | 'OFFLINE' | 'PARTIALLY_AVAILABLE';
   connectors: Connector[];
-  status: string;
-  lastConnected?: string;
+  vendor: string;
+  model: string;
+  serialNumber?: string;
   firmwareVersion?: string;
-  owner: string;
+  lastHeartbeat?: string;
+  lastConnected?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface StationCreateData {
-  name: string;
-  serialNumber: string;
-  model: string;
-  manufacturer: string;
-  location: StationLocation;
-  connectors: {
-    connectorNumber: number;
-    type: string;
-    maxPower: number;
-  }[];
-}
-
-export interface StationUpdateData {
-  name?: string;
-  location?: Partial<StationLocation>;
+export interface StationFilter {
   status?: string;
+  location?: string;
+  vendor?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
-export interface StationFilterParams {
-  name?: string;
-  status?: string;
-  city?: string;
-  state?: string;
-  country?: string;
+export interface StationResponse {
+  stations: Station[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
-export interface StationStats {
-  totalStations: number;
-  activeStations: number;
-  totalConnectors: number;
-  availableConnectors: number;
-  chargingConnectors: number;
-  faultedConnectors: number;
-}
-
+// CRUD operations for stations
 class StationService extends ApiService {
   constructor() {
     super();
-    // Use station-service as base URL
-    this.api.defaults.baseURL = `${this.api.defaults.baseURL}/api/stations`;
+    // Set base URL for station requests
+    this.api.defaults.baseURL = `${this.api.defaults.baseURL}/stations`;
   }
 
-  // Get all stations with pagination and filtering
-  async getStations(
-    page = 0,
-    size = 10,
-    filters?: StationFilterParams
-  ): Promise<PaginatedResponse<Station>> {
-    return this.get<PaginatedResponse<Station>>('', {
-      params: {
-        page,
-        size,
-        ...filters
-      }
-    });
+  // Fetch all stations with optional filtering
+  async getStations(filters: StationFilter = {}): Promise<StationResponse> {
+    return this.get<StationResponse>('', { params: filters });
   }
 
-  // Get station by ID
+  // Get a single station by ID
   async getStation(id: string): Promise<Station> {
     return this.get<Station>(`/${id}`);
   }
 
-  // Create new station
-  async createStation(stationData: StationCreateData): Promise<Station> {
+  // Create a new station
+  async createStation(stationData: Partial<Station>): Promise<Station> {
     return this.post<Station>('', stationData);
   }
 
-  // Update station
-  async updateStation(id: string, stationData: StationUpdateData): Promise<Station> {
+  // Update an existing station
+  async updateStation(id: string, stationData: Partial<Station>): Promise<Station> {
     return this.put<Station>(`/${id}`, stationData);
   }
 
-  // Delete station
+  // Delete a station
   async deleteStation(id: string): Promise<void> {
-    return this.delete(`/${id}`);
+    return this.delete<void>(`/${id}`);
   }
 
-  // Get station statistics
-  async getStationStats(): Promise<StationStats> {
-    return this.get<StationStats>('/stats');
+  // Send remote command to a station (e.g. reboot, unlock connector)
+  async sendCommand(id: string, command: string, params?: any): Promise<any> {
+    return this.post<any>(`/${id}/commands`, { command, params });
   }
-
-  // Remote station commands
-  async rebootStation(id: string): Promise<void> {
-    return this.post(`/${id}/reboot`);
-  }
-
-  async updateFirmware(id: string, firmwareVersion: string): Promise<void> {
-    return this.post(`/${id}/update-firmware`, { firmwareVersion });
-  }
-
-  // Connector operations
-  async resetConnector(stationId: string, connectorId: string): Promise<void> {
-    return this.post(`/${stationId}/connectors/${connectorId}/reset`);
-  }
-
-  async enableConnector(stationId: string, connectorId: string): Promise<void> {
-    return this.post(`/${stationId}/connectors/${connectorId}/enable`);
-  }
-
-  async disableConnector(stationId: string, connectorId: string): Promise<void> {
-    return this.post(`/${stationId}/connectors/${connectorId}/disable`);
+  
+  // Get station statistics (counts by status, etc.)
+  async getStationStats(): Promise<any> {
+    return this.get<any>('/stats');
   }
 }
 
-export default new StationService(); 
+// Export a singleton instance
+export const stationService = new StationService(); 
