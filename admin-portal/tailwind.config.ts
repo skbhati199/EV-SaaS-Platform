@@ -40,7 +40,7 @@ const config = {
   				foreground: "hsl(var(--muted-foreground))",
   			},
   			accent: {
-  				DEFAULT: "#22c55e", // green-500
+  				DEFAULT: "hsl(var(--accent))",
   				foreground: "hsl(var(--accent-foreground))",
   			},
   			popover: {
@@ -58,7 +58,7 @@ const config = {
   			sm: "calc(var(--radius) - 4px)",
   		},
   		backgroundImage: {
-  			'gradient-green': 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+  			'gradient-green': 'linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--accent)/0.8) 100%)',
   		},
   		keyframes: {
   			"accordion-down": {
