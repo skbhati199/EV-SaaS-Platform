@@ -3,6 +3,7 @@ package com.ev.apigateway.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -35,14 +36,14 @@ public class OcpiTokenValidationService {
                 .uri("lb://roaming-service/api/internal/tokens/validate?token={token}", token)
                 .retrieve()
                 .onStatus(
-                    HttpStatus::is4xxClientError, 
+                    statusCode -> statusCode.is4xxClientError(), 
                     response -> {
                         log.error("Token validation failed with client error: {}", response.statusCode());
                         return Mono.just(new RuntimeException("Invalid token"));
                     }
                 )
                 .onStatus(
-                    HttpStatus::is5xxServerError,
+                    statusCode -> statusCode.is5xxServerError(),
                     response -> {
                         log.error("Token validation failed with server error: {}", response.statusCode());
                         return Mono.just(new RuntimeException("Token validation service unavailable"));
