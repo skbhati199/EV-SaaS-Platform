@@ -112,22 +112,23 @@ public class PaymentServiceImpl implements PaymentService {
         existingPayment.setStatus(paymentDTO.getStatus());
         existingPayment.setPaymentDate(paymentDTO.getPaymentDate());
         
-        existingPayment = paymentRepository.save(existingPayment);
+        final Payment savedPayment = paymentRepository.save(existingPayment);
         
         // If payment status changed to COMPLETED, update invoice and send notification
         if (paymentDTO.getStatus() == PaymentStatus.COMPLETED && 
-                existingPayment.getStatus() == PaymentStatus.COMPLETED) {
+                savedPayment.getStatus() == PaymentStatus.COMPLETED) {
             
-            Invoice invoice = invoiceRepository.findById(existingPayment.getInvoiceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", existingPayment.getInvoiceId()));
+            final UUID invoiceId = savedPayment.getInvoiceId();
+            Invoice invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", invoiceId));
             
-            updateInvoiceStatus(invoice, existingPayment.getAmount(), existingPayment.getPaymentDate());
+            updateInvoiceStatus(invoice, savedPayment.getAmount(), savedPayment.getPaymentDate());
             
             // Send notification for successful payment
-            notificationService.sendPaymentReceivedNotification(existingPayment);
+            notificationService.sendPaymentReceivedNotification(savedPayment);
         }
         
-        return mapToDTO(existingPayment);
+        return mapToDTO(savedPayment);
     }
     
     @Override
@@ -152,16 +153,17 @@ public class PaymentServiceImpl implements PaymentService {
         }
         
         payment.setStatus(PaymentStatus.REFUNDED);
-        payment = paymentRepository.save(payment);
+        final Payment savedPayment = paymentRepository.save(payment);
         
         // Update invoice status
-        Invoice invoice = invoiceRepository.findById(payment.getInvoiceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", payment.getInvoiceId()));
+        final UUID invoiceId = savedPayment.getInvoiceId();
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", invoiceId));
         
         invoice.setStatus(InvoiceStatus.REFUNDED);
         invoiceRepository.save(invoice);
         
-        return mapToDTO(payment);
+        return mapToDTO(savedPayment);
     }
     
     private void updateInvoiceStatus(Invoice invoice, java.math.BigDecimal paymentAmount, LocalDateTime paymentDate) {
