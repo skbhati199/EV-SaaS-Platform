@@ -1,19 +1,42 @@
 version: '3.8'
 
 services:
-  ## Database
-  timescaledb-postgis:
+  ## Databases
+  # TimescaleDB for time-series data (charging sessions, telemetry, etc.)
+  timescaledb:
     image: timescale/timescaledb-postgis:latest-pg13
-    container_name: ev-saas-postgres
+    container_name: ev-saas-timescaledb
     ports:
       - "5431:5432"
+    environment:
+      POSTGRES_USER: evsaas
+      POSTGRES_PASSWORD: evsaas_password
+      POSTGRES_DB: evsaas_timeseries_db
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/timescaledb:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evsaas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Regular PostgreSQL for user data, auth, billing, etc.
+  postgres:
+    image: postgres:14-alpine
+    container_name: ev-saas-postgres
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: evsaas
       POSTGRES_PASSWORD: evsaas_password
       POSTGRES_DB: evsaas_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d
+      - ./infra/postgres/init/postgres:/docker-entrypoint-initdb.d
     restart: unless-stopped
     networks:
       - ev-network
@@ -55,7 +78,7 @@ services:
     # Kafka and Zookeeper for event streaming
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: appointment-zookeeper
+    container_name: ev-saas-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -67,7 +90,7 @@ services:
   # Kafka broker
   kafka:
     image: confluentinc/cp-kafka:latest
-    container_name: appointment-kafka
+    container_name: ev-saas-kafka
     depends_on:
       - zookeeper
     ports:
@@ -111,7 +134,7 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      timescaledb-postgis:
+      postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -119,7 +142,7 @@ services:
       - ev-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
       - SPRING_DATASOURCE_USERNAME=evsaas
       - SPRING_DATASOURCE_PASSWORD=evsaas_password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
@@ -144,7 +167,7 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      timescaledb-postgis:
+      postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -152,7 +175,7 @@ services:
       - ev-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
       - SPRING_DATASOURCE_USERNAME=evsaas
       - SPRING_DATASOURCE_PASSWORD=evsaas_password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
@@ -172,7 +195,9 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      timescaledb-postgis:
+      postgres:
+        condition: service_healthy
+      timescaledb:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -180,9 +205,12 @@ services:
       - ev-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb-postgis:5432/evsaas_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
       - SPRING_DATASOURCE_USERNAME=evsaas
       - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - TIMESCALE_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
+      - TIMESCALE_DATASOURCE_USERNAME=evsaas
+      - TIMESCALE_DATASOURCE_PASSWORD=evsaas_password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SERVER_PORT=8083
       - SPRING_FLYWAY_ENABLED=false
@@ -190,9 +218,128 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      
+  ## Station Service (uses TimescaleDB for time-series data)
+  station-service:
+    build:
+      context: ./station-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-station
+    ports:
+      - "8084:8084"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8084
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      
+  ## Scheduler Service
+  scheduler-service:
+    build:
+      context: ./scheduler-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-scheduler
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8086
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      
+  ## Notification Service with Kafka
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-notification
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8087
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      
+  ## Smart Charging Service
+  smart-charging:
+    build:
+      context: ./smart-charging
+      dockerfile: Dockerfile
+    container_name: ev-saas-smart-charging
+    ports:
+      - "8085:8085"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8085
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
 volumes:
   postgres_data:
+  timescaledb_data:
   redis_data:
 
 networks:
