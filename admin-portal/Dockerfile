@@ -20,8 +20,8 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 
-# Build the application
-RUN npm run build
+# Build the application using npx
+RUN npx next build
 
 # Production image
 FROM base AS runner
