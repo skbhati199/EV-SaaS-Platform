@@ -1,7 +1,7 @@
 package com.ev.notificationservice.controller;
 
-import com.ev.notificationservice.dto.NotificationEvent;
-import com.ev.notificationservice.model.Notification;
+import com.ev.notificationservice.dto.NotificationDTO;
+import com.ev.notificationservice.service.EventNotificationService;
 import com.ev.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -18,52 +17,52 @@ import java.util.UUID;
 public class NotificationApiController {
 
     private final NotificationService notificationService;
+    private final EventNotificationService eventNotificationService;
     
     @GetMapping
-    public ResponseEntity<List<Notification>> getUserNotifications(@RequestHeader("X-User-ID") UUID userId) {
-        return ResponseEntity.ok(notificationService.getUserNotifications(userId));
+    public ResponseEntity<List<NotificationDTO>> getUserNotifications(@RequestHeader("X-User-ID") UUID userId) {
+        return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId));
     }
     
     @GetMapping("/unread")
-    public ResponseEntity<List<Notification>> getUnreadNotifications(@RequestHeader("X-User-ID") UUID userId) {
-        return ResponseEntity.ok(notificationService.getUnreadNotifications(userId));
+    public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(@RequestHeader("X-User-ID") UUID userId) {
+        return ResponseEntity.ok(notificationService.getUnreadNotificationsByUserId(userId));
     }
     
     @PatchMapping("/{notificationId}/read")
-    public ResponseEntity<Void> markAsRead(@PathVariable UUID notificationId, @RequestHeader("X-User-ID") UUID userId) {
-        notificationService.markAsRead(notificationId, userId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<NotificationDTO> markAsRead(@PathVariable UUID notificationId) {
+        return ResponseEntity.ok(notificationService.markAsRead(notificationId));
     }
     
     @PostMapping("/email")
-    public ResponseEntity<Void> sendEmailNotification(
+    public ResponseEntity<UUID> sendEmailNotification(
             @RequestHeader("X-User-ID") UUID userId,
             @RequestParam String email,
             @RequestParam String subject,
             @RequestParam String content,
             @RequestParam String type) {
-        notificationService.sendEmailNotification(userId, email, subject, content, type);
-        return new ResponseEntity<>(HttpStatus.ACCEPTED);
+        UUID id = eventNotificationService.sendEmailNotification(userId, email, subject, content, type);
+        return new ResponseEntity<>(id, HttpStatus.ACCEPTED);
     }
     
     @PostMapping("/sms")
-    public ResponseEntity<Void> sendSmsNotification(
+    public ResponseEntity<UUID> sendSmsNotification(
             @RequestHeader("X-User-ID") UUID userId,
             @RequestParam String phoneNumber,
             @RequestParam String message,
             @RequestParam String type) {
-        notificationService.sendSmsNotification(userId, phoneNumber, message, type);
-        return new ResponseEntity<>(HttpStatus.ACCEPTED);
+        UUID id = eventNotificationService.sendSmsNotification(userId, phoneNumber, message, type);
+        return new ResponseEntity<>(id, HttpStatus.ACCEPTED);
     }
     
     @PostMapping("/push")
-    public ResponseEntity<Void> sendPushNotification(
+    public ResponseEntity<UUID> sendPushNotification(
             @RequestHeader("X-User-ID") UUID userId,
             @RequestParam String deviceToken,
             @RequestParam String title,
             @RequestParam String message,
             @RequestParam String type) {
-        notificationService.sendPushNotification(userId, deviceToken, title, message, type);
-        return new ResponseEntity<>(HttpStatus.ACCEPTED);
+        UUID id = eventNotificationService.sendPushNotification(userId, deviceToken, title, message, type);
+        return new ResponseEntity<>(id, HttpStatus.ACCEPTED);
     }
 } 

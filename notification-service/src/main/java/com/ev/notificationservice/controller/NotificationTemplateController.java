@@ -1,205 +1,217 @@
 package com.ev.notificationservice.controller;
 
 import com.ev.notificationservice.dto.NotificationDTO;
-import com.ev.notificationservice.service.NotificationService;
+import com.ev.notificationservice.service.EventNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/notification-templates")
+@RequestMapping("/api/v1/notifications/templates")
 @RequiredArgsConstructor
 public class NotificationTemplateController {
     
-    private final NotificationService notificationService;
+    private final EventNotificationService eventNotificationService;
     
-    @PostMapping("/invoice-created")
+    @PostMapping("/verification")
     @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendInvoiceCreatedNotification(
+    public ResponseEntity<UUID> sendEmailVerification(
             @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID invoiceId,
-            @RequestParam String invoiceNumber,
+            @RequestParam String email,
+            @RequestParam String verificationCode) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("verificationCode", verificationCode);
+        
+        NotificationDTO notification = NotificationDTO.builder()
+                .userId(userId)
+                .type("USER_VERIFICATION")
+                .subject("Verify Your Email Address")
+                .channel("EMAIL")
+                .recipient(email)
+                .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Verify Your Email Address",
+                "email-verification",
+                templateData,
+                "USER_VERIFICATION"
+        );
+        
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/password-reset")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
+    public ResponseEntity<UUID> sendPasswordReset(
+            @RequestParam UUID userId,
+            @RequestParam String email,
+            @RequestParam String resetToken) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("resetToken", resetToken);
+        
+        NotificationDTO notification = NotificationDTO.builder()
+                .userId(userId)
+                .type("PASSWORD_RESET")
+                .subject("Reset Your Password")
+                .channel("EMAIL")
+                .recipient(email)
+                .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Reset Your Password",
+                "password-reset",
+                templateData,
+                "PASSWORD_RESET"
+        );
+        
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/charging-started")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO')")
+    public ResponseEntity<UUID> sendChargingStarted(
+            @RequestParam UUID userId,
+            @RequestParam String email,
+            @RequestParam String stationName,
+            @RequestParam String sessionId) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("stationName", stationName);
+        templateData.put("sessionId", sessionId);
+        
+        NotificationDTO notification = NotificationDTO.builder()
+                .userId(userId)
+                .type("CHARGING_STARTED")
+                .subject("Your Charging Session Has Started")
+                .channel("EMAIL")
+                .recipient(email)
+                .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Your Charging Session Has Started",
+                "charging-started",
+                templateData,
+                "CHARGING_STARTED"
+        );
+        
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/charging-completed")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO')")
+    public ResponseEntity<UUID> sendChargingCompleted(
+            @RequestParam UUID userId,
+            @RequestParam String email,
+            @RequestParam String stationName,
+            @RequestParam String sessionId,
+            @RequestParam String duration,
+            @RequestParam String energy,
+            @RequestParam String cost) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("stationName", stationName);
+        templateData.put("sessionId", sessionId);
+        templateData.put("duration", duration);
+        templateData.put("energy", energy);
+        templateData.put("cost", cost);
+        
+        NotificationDTO notification = NotificationDTO.builder()
+                .userId(userId)
+                .type("CHARGING_COMPLETED")
+                .subject("Your Charging Session Is Complete")
+                .channel("EMAIL")
+                .recipient(email)
+                .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Your Charging Session Is Complete",
+                "charging-completed",
+                templateData,
+                "CHARGING_COMPLETED"
+        );
+        
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/payment-successful")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
+    public ResponseEntity<UUID> sendPaymentSuccessful(
+            @RequestParam UUID userId,
+            @RequestParam String email,
             @RequestParam String amount,
-            @RequestParam String dueDate) {
+            @RequestParam String invoiceNumber) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("amount", amount);
+        templateData.put("invoiceNumber", invoiceNumber);
         
-        String subject = "New Invoice: " + invoiceNumber;
-        String content = String.format(
-                "A new invoice has been created for your account.\n\n" +
-                "Invoice Number: %s\n" +
-                "Amount: %s\n" +
-                "Due Date: %s\n\n" +
-                "Please log in to your account to view and pay this invoice.",
-                invoiceNumber, amount, dueDate);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
+        NotificationDTO notification = NotificationDTO.builder()
                 .userId(userId)
-                .type("INVOICE_CREATED")
-                .subject(subject)
-                .content(content)
+                .type("PAYMENT_SUCCESSFUL")
+                .subject("Payment Successful")
                 .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(invoiceId)
-                .relatedEntityType("INVOICE")
+                .recipient(email)
                 .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Payment Successful",
+                "payment-successful",
+                templateData,
+                "PAYMENT_SUCCESSFUL"
+        );
         
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
     }
     
-    @PostMapping("/payment-received")
+    @PostMapping("/payment-failed")
     @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendPaymentReceivedNotification(
+    public ResponseEntity<UUID> sendPaymentFailed(
             @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID paymentId,
-            @RequestParam UUID invoiceId,
-            @RequestParam String invoiceNumber,
+            @RequestParam String email,
             @RequestParam String amount,
-            @RequestParam String paymentDate) {
-        
-        String subject = "Payment Received: Invoice " + invoiceNumber;
-        String content = String.format(
-                "We have received your payment of %s for invoice %s on %s.\n\n" +
-                "Thank you for your business!",
-                amount, invoiceNumber, paymentDate);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
-                .userId(userId)
-                .type("PAYMENT_RECEIVED")
-                .subject(subject)
-                .content(content)
-                .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(paymentId)
-                .relatedEntityType("PAYMENT")
-                .build();
-        
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
-    }
-    
-    @PostMapping("/payment-reminder")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendPaymentReminderNotification(
-            @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID invoiceId,
             @RequestParam String invoiceNumber,
-            @RequestParam String amount,
-            @RequestParam String dueDate) {
+            @RequestParam String errorMessage) {
+            
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("amount", amount);
+        templateData.put("invoiceNumber", invoiceNumber);
+        templateData.put("errorMessage", errorMessage);
         
-        String subject = "Payment Reminder: Invoice " + invoiceNumber;
-        String content = String.format(
-                "This is a reminder that invoice %s for %s is due on %s.\n\n" +
-                "Please log in to your account to make a payment.",
-                invoiceNumber, amount, dueDate);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
+        NotificationDTO notification = NotificationDTO.builder()
                 .userId(userId)
-                .type("PAYMENT_REMINDER")
-                .subject(subject)
-                .content(content)
+                .type("PAYMENT_FAILED")
+                .subject("Payment Failed")
                 .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(invoiceId)
-                .relatedEntityType("INVOICE")
+                .recipient(email)
                 .build();
+                
+        UUID id = eventNotificationService.sendTemplatedEmailNotification(
+                userId,
+                email,
+                "Payment Failed",
+                "payment-failed",
+                templateData,
+                "PAYMENT_FAILED"
+        );
         
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
-    }
-    
-    @PostMapping("/payment-overdue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendPaymentOverdueNotification(
-            @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID invoiceId,
-            @RequestParam String invoiceNumber,
-            @RequestParam String amount,
-            @RequestParam String dueDate) {
-        
-        String subject = "Payment Overdue: Invoice " + invoiceNumber;
-        String content = String.format(
-                "Invoice %s for %s was due on %s and is now overdue.\n\n" +
-                "Please log in to your account to make a payment as soon as possible to avoid late fees.",
-                invoiceNumber, amount, dueDate);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
-                .userId(userId)
-                .type("PAYMENT_OVERDUE")
-                .subject(subject)
-                .content(content)
-                .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(invoiceId)
-                .relatedEntityType("INVOICE")
-                .build();
-        
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
-    }
-    
-    @PostMapping("/subscription-created")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendSubscriptionCreatedNotification(
-            @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID subscriptionId,
-            @RequestParam String planName,
-            @RequestParam String startDate,
-            @RequestParam String price) {
-        
-        String subject = "New Subscription: " + planName;
-        String content = String.format(
-                "Your subscription to %s has been activated.\n\n" +
-                "Start Date: %s\n" +
-                "Price: %s\n\n" +
-                "Thank you for your subscription!",
-                planName, startDate, price);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
-                .userId(userId)
-                .type("SUBSCRIPTION_CREATED")
-                .subject(subject)
-                .content(content)
-                .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(subscriptionId)
-                .relatedEntityType("SUBSCRIPTION")
-                .build();
-        
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
-    }
-    
-    @PostMapping("/subscription-canceled")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
-    public ResponseEntity<NotificationDTO> sendSubscriptionCanceledNotification(
-            @RequestParam UUID userId,
-            @RequestParam String recipient,
-            @RequestParam UUID subscriptionId,
-            @RequestParam String planName,
-            @RequestParam String endDate) {
-        
-        String subject = "Subscription Canceled: " + planName;
-        String content = String.format(
-                "Your subscription to %s has been canceled.\n\n" +
-                "End Date: %s\n\n" +
-                "We're sorry to see you go. Please let us know if there's anything we can do to improve our service.",
-                planName, endDate);
-        
-        NotificationDTO notificationDTO = NotificationDTO.builder()
-                .userId(userId)
-                .type("SUBSCRIPTION_CANCELED")
-                .subject(subject)
-                .content(content)
-                .channel("EMAIL")
-                .recipient(recipient)
-                .relatedEntityId(subscriptionId)
-                .relatedEntityType("SUBSCRIPTION")
-                .build();
-        
-        return new ResponseEntity<>(notificationService.createNotification(notificationDTO), HttpStatus.CREATED);
+        return new ResponseEntity<>(id, HttpStatus.CREATED);
     }
 } 

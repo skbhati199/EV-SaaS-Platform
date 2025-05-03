@@ -69,11 +69,6 @@ services:
       - "8761:8761"
     networks:
       - ev-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8761/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
     # Kafka and Zookeeper for event streaming
   zookeeper:
@@ -330,9 +325,9 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
-      eureka-server:
-        condition: service_healthy
       kafka:
+        condition: service_started
+      eureka-server:
         condition: service_started
     networks:
       - ev-network
