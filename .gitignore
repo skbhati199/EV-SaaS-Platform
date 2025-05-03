@@ -13,6 +13,9 @@ coverage/
 .vscode/
 .DS_Store
 
+cursor_accounts.txt
+
+install.sh
 # === Admin Portal (Next.js App) ===
 /admin-portal/node_modules/
 /admin-portal/.next/
