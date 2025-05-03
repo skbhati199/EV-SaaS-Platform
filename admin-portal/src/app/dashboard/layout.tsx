@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import {

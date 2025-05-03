@@ -21,5 +21,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "yarn@1.22.19"
+  "packageManager": "yarn@1.22.19",
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "next-themes": "^0.4.6",
+    "tailwind-merge": "^3.2.0"
+  }
 }
