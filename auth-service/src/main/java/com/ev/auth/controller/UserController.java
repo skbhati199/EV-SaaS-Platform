@@ -64,7 +64,7 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<UserResponse> getUserById(
-            @Parameter(description = "User ID", required = true)
+            @Parameter(description = "User ID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID id) {
         log.info("Fetching user with ID: {}", id);
         
@@ -89,7 +89,7 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<UserResponse> getUserByEmail(
-            @Parameter(description = "User email", required = true)
+            @Parameter(description = "User email", required = true, example = "user@example.com")
             @PathVariable String email) {
         log.info("Fetching user with email: {}", email);
         
@@ -114,7 +114,7 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<UserResponse> deactivateUser(
-            @Parameter(description = "User ID", required = true)
+            @Parameter(description = "User ID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID id) {
         log.info("Deactivating user with ID: {}", id);
         
@@ -137,7 +137,7 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Access denied")
     })
     public ResponseEntity<UserResponse> activateUser(
-            @Parameter(description = "User ID", required = true)
+            @Parameter(description = "User ID", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID id) {
         log.info("Activating user with ID: {}", id);
         

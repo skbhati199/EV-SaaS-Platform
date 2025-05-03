@@ -79,7 +79,7 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid refresh token")
     })
     public ResponseEntity<TokenResponse> refreshToken(
-            @Parameter(description = "Refresh token", required = true)
+            @Parameter(description = "Refresh token", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestParam String refreshToken) {
         log.info("Token refresh request received");
         TokenResponse tokenResponse = keycloakService.refreshToken(refreshToken);
@@ -97,7 +97,7 @@ public class AuthController {
                 content = @Content(schema = @Schema(implementation = Boolean.class)))
     })
     public ResponseEntity<Boolean> validateToken(
-            @Parameter(description = "JWT token to validate", required = true)
+            @Parameter(description = "JWT token to validate", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestParam String token) {
         log.info("Token validation request received");
         boolean isValid = keycloakService.validateToken(token);

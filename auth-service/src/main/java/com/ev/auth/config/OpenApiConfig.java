@@ -55,10 +55,11 @@ public class OpenApiConfig {
     }
     
     @Bean
-    public GroupedOpenApi publicApi() {
+    public GroupedOpenApi authServiceApi() {
         return GroupedOpenApi.builder()
-                .group("auth-service-public")
-                .pathsToMatch("/api/v1/auth/**")
+                .group("auth-service")
+                .packagesToScan("com.ev.auth.controller")
+                .pathsToMatch("/api/v1/**")
                 .displayName("Auth Service API")
                 .build();
     }
