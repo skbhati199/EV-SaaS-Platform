@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -213,6 +214,83 @@ public class ChargingStationServiceImpl implements ChargingStationService {
         
         ChargingStation updatedStation = stationRepository.save(station);
         return mapToDto(updatedStation);
+    }
+    
+    @Override
+    @Transactional
+    public ChargingStation registerOrUpdateStation(String stationId) {
+        Optional<ChargingStation> stationOpt = stationRepository.findBySerialNumber(stationId);
+        
+        if (stationOpt.isPresent()) {
+            ChargingStation station = stationOpt.get();
+            // Update status if offline
+            if (station.getStatus() == StationStatus.OFFLINE) {
+                station.setStatus(StationStatus.AVAILABLE);
+                station = stationRepository.save(station);
+            }
+            return station;
+        } else {
+            // Create new station with basic information
+            ChargingStation newStation = ChargingStation.builder()
+                    .serialNumber(stationId)
+                    .name("Station " + stationId)
+                    .status(StationStatus.PENDING)
+                    .registrationDate(LocalDateTime.now())
+                    .lastHeartbeat(LocalDateTime.now())
+                    .build();
+            
+            return stationRepository.save(newStation);
+        }
+    }
+    
+    @Override
+    @Transactional
+    public ChargingStation updateHeartbeat(String stationId) {
+        ChargingStation station = stationRepository.findBySerialNumber(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found with serial number: " + stationId));
+        
+        LocalDateTime now = LocalDateTime.now();
+        station.setLastHeartbeat(now);
+        
+        // If station was offline, change status to available
+        if (station.getStatus() == StationStatus.OFFLINE) {
+            station.setStatus(StationStatus.AVAILABLE);
+        }
+        
+        // Create heartbeat record
+        StationHeartbeat heartbeat = StationHeartbeat.builder()
+                .stationId(station.getId())
+                .timestamp(now)
+                .build();
+        
+        heartbeatRepository.save(heartbeat);
+        return stationRepository.save(station);
+    }
+    
+    @Override
+    @Transactional
+    public ChargingStation updateStationById(UUID id, ChargingStation station) {
+        if (!stationRepository.existsById(id)) {
+            throw new EntityNotFoundException("Station not found with id: " + id);
+        }
+        
+        station.setId(id); // Ensure ID is set correctly
+        return stationRepository.save(station);
+    }
+    
+    @Override
+    @Transactional
+    public ChargingStationDto updateStationStatus(String stationId, StationStatus status) {
+        ChargingStation station = stationRepository.findBySerialNumber(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found with serial number: " + stationId));
+        
+        station.setStatus(status);
+        station = stationRepository.save(station);
+        
+        // Log status change
+        log.info("Updated status for station {}: {} -> {}", stationId, station.getStatus(), status);
+        
+        return mapToDto(station);
     }
     
     private ChargingStationDto mapToDto(ChargingStation station) {

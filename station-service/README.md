@@ -91,4 +91,101 @@ The service can be configured via the `application.properties` file, with option
 - Database connection
 - Authentication settings
 - OCPP parameters
+- Metrics collection intervals
+
+# Station Service - OCPP Implementation
+
+## Overview
+
+The Station Service manages EV charging stations and implements OCPP 1.6 (Open Charge Point Protocol) for communication with charging stations. This service is responsible for:
+
+- Station registration and management
+- Connector (EVSE) management
+- OCPP communication via WebSocket
+- Charging session management
+- Heartbeat and status monitoring
+
+## OCPP Implementation
+
+The service implements OCPP 1.6 over WebSocket, providing the following core functionality:
+
+### OCPP Message Types
+
+- **BootNotification**: Handles station registration and startup
+- **Heartbeat**: Monitors station connectivity
+- **StatusNotification**: Tracks connector status changes
+- **StartTransaction**: Initiates charging sessions
+- **StopTransaction**: Concludes charging sessions
+- **MeterValues**: Collects energy consumption data
+
+### WebSocket Endpoint
+
+The OCPP WebSocket endpoint is available at:
+```
+ws://{host}:{port}/ocpp/{stationId}/{ocppVersion}
+```
+
+Where:
+- `{stationId}` is the unique identifier of the charging station
+- `{ocppVersion}` should be "1.6" for OCPP 1.6 communication
+
+### Station Lifecycle
+
+1. **Connection**: Stations connect via WebSocket with the appropriate headers
+2. **Registration**: Stations send BootNotification to register themselves
+3. **Heartbeat**: Stations send periodic heartbeats to maintain connection
+4. **Status Updates**: Stations notify about connector status changes
+5. **Transactions**: Stations handle start/stop of charging sessions
+6. **Metering**: Stations report energy consumption during charging
+
+## API Endpoints
+
+### Station Management
+
+- `GET /api/v1/stations` - Get all stations
+- `GET /api/v1/stations/{id}` - Get station by ID
+- `POST /api/v1/stations` - Register a new station
+- `PUT /api/v1/stations/{id}` - Update station information
+- `DELETE /api/v1/stations/{id}` - Remove a station
+
+### Connector Management
+
+- `GET /api/v1/stations/{stationId}/connectors` - Get all connectors for a station
+- `GET /api/v1/stations/{stationId}/connectors/{id}` - Get connector by ID
+- `POST /api/v1/stations/{stationId}/connectors` - Add a connector to a station
+- `PUT /api/v1/stations/{stationId}/connectors/{id}` - Update connector information
+- `DELETE /api/v1/stations/{stationId}/connectors/{id}` - Remove a connector
+
+### Session Management
+
+- `GET /api/v1/stations/{stationId}/sessions` - Get all sessions for a station
+- `GET /api/v1/stations/{stationId}/sessions/{id}` - Get session by ID
+- `GET /api/v1/stations/{stationId}/sessions/transaction/{transactionId}` - Get session by transaction ID
+- `POST /api/v1/stations/{stationId}/sessions/start` - Start a charging session
+- `PUT /api/v1/stations/{stationId}/sessions/{transactionId}/stop` - Stop a charging session
+
+## Security
+
+The service implements role-based access control:
+
+- **ADMIN**: Full access to all APIs
+- **CPO** (Charge Point Operator): Access to manage their own stations
+- **USER**: Limited access to public station information and their own sessions
+
+## OCPP Integration Testing
+
+To test the OCPP implementation with a simulator:
+
+1. Use an OCPP simulator like OCPP-J-Simulator or Node-OCPP
+2. Configure the simulator to connect to the WebSocket endpoint
+3. Send BootNotification, Heartbeat, and other OCPP messages
+4. Verify the server responses in logs or through the admin API
+
+## Configuration
+
+The service can be configured via the `application.properties` file, with options for:
+
+- Database connection
+- Authentication settings
+- OCPP parameters
 - Metrics collection intervals 
