@@ -1,10 +1,10 @@
 package com.ev.notificationservice.service.impl;
 
 import com.ev.notificationservice.dto.NotificationDTO;
-import com.ev.notificationservice.exception.ResourceNotFoundException;
 import com.ev.notificationservice.model.Notification;
 import com.ev.notificationservice.repository.NotificationRepository;
 import com.ev.notificationservice.service.NotificationService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,16 +32,17 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public NotificationDTO getNotificationById(UUID id) {
-        Notification notification = findNotificationById(id);
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Notification not found with id: " + id));
         return mapToDTO(notification);
     }
     
     @Override
     @Transactional(readOnly = true)
     public List<NotificationDTO> getNotificationsByUserId(UUID userId) {
-        List<Notification> notifications = notificationRepository.findByUserId(userId);
+        List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
         return notifications.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -50,7 +51,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificationDTO> getUnsentNotificationsByUserId(UUID userId) {
-        List<Notification> notifications = notificationRepository.findByUserIdAndSentFalse(userId);
+        List<Notification> notifications = notificationRepository.findByUserIdAndSentFalseOrderByCreatedAtDesc(userId);
         return notifications.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -59,7 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificationDTO> getUnreadNotificationsByUserId(UUID userId) {
-        List<Notification> notifications = notificationRepository.findByUserIdAndReadFalse(userId);
+        List<Notification> notifications = notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
         return notifications.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -104,10 +105,13 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     @Transactional
-    public NotificationDTO markAsSent(UUID id, LocalDateTime sentAt) {
-        Notification notification = findNotificationById(id);
+    public NotificationDTO markAsSent(UUID id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Notification not found with id: " + id));
+        
         notification.setSent(true);
-        notification.setSentAt(sentAt != null ? sentAt : LocalDateTime.now());
+        notification.setSentAt(LocalDateTime.now());
+        
         notification = notificationRepository.save(notification);
         return mapToDTO(notification);
     }
@@ -115,9 +119,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDTO markAsRead(UUID id) {
-        Notification notification = findNotificationById(id);
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Notification not found with id: " + id));
+        
         notification.setRead(true);
         notification.setReadAt(LocalDateTime.now());
+        
         notification = notificationRepository.save(notification);
         return mapToDTO(notification);
     }
@@ -151,8 +158,13 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void deleteNotification(UUID id) {
-        Notification notification = findNotificationById(id);
-        notificationRepository.delete(notification);
+        notificationRepository.deleteById(id);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteNotificationsByUserId(UUID userId) {
+        notificationRepository.deleteByUserId(userId);
     }
     
     private boolean sendNotificationByChannel(Notification notification) {
@@ -201,9 +213,23 @@ public class NotificationServiceImpl implements NotificationService {
         return true;
     }
     
-    private Notification findNotificationById(UUID id) {
-        return notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+    private Notification mapToEntity(NotificationDTO dto) {
+        return Notification.builder()
+                .id(dto.getId() != null ? dto.getId() : UUID.randomUUID())
+                .userId(dto.getUserId())
+                .type(dto.getType())
+                .subject(dto.getSubject())
+                .content(dto.getContent())
+                .channel(dto.getChannel())
+                .recipient(dto.getRecipient())
+                .sent(dto.isSent())
+                .sentAt(dto.getSentAt())
+                .read(dto.isRead())
+                .readAt(dto.getReadAt())
+                .createdAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : LocalDateTime.now())
+                .relatedEntityId(dto.getRelatedEntityId())
+                .relatedEntityType(dto.getRelatedEntityType())
+                .build();
     }
     
     private NotificationDTO mapToDTO(Notification notification) {
@@ -216,29 +242,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .channel(notification.getChannel())
                 .recipient(notification.getRecipient())
                 .sent(notification.isSent())
-                .read(notification.isRead())
-                .createdAt(notification.getCreatedAt())
                 .sentAt(notification.getSentAt())
+                .read(notification.isRead())
                 .readAt(notification.getReadAt())
+                .createdAt(notification.getCreatedAt())
                 .relatedEntityId(notification.getRelatedEntityId())
                 .relatedEntityType(notification.getRelatedEntityType())
-                .build();
-    }
-    
-    private Notification mapToEntity(NotificationDTO notificationDTO) {
-        return Notification.builder()
-                .userId(notificationDTO.getUserId())
-                .type(notificationDTO.getType())
-                .subject(notificationDTO.getSubject())
-                .content(notificationDTO.getContent())
-                .channel(notificationDTO.getChannel())
-                .recipient(notificationDTO.getRecipient())
-                .sent(notificationDTO.isSent())
-                .read(notificationDTO.isRead())
-                .sentAt(notificationDTO.getSentAt())
-                .readAt(notificationDTO.getReadAt())
-                .relatedEntityId(notificationDTO.getRelatedEntityId())
-                .relatedEntityType(notificationDTO.getRelatedEntityType())
                 .build();
     }
 } 

@@ -15,66 +15,68 @@ import java.util.UUID;
 @AllArgsConstructor
 public class NotificationEvent {
     
+    private UUID id;
     private UUID userId;
     private String type; // USER_VERIFICATION, PAYMENT_CONFIRMATION, CHARGING_STARTED, etc.
     private String subject;
     private String content;
-    private String templateId; // Optional, for templated notifications
-    private String channel; // EMAIL, SMS, PUSH, WEBHOOK
-    private String recipient; // email, phone number, etc.
-    private Map<String, Object> templateData; // For template variables
+    private String channel; // email, sms, push, in-app
+    private String recipient; // email address, phone number, device token
+    private String templateId; // For email templates
+    private Map<String, Object> templateData; // For email templates
+    private LocalDateTime timestamp;
     private UUID relatedEntityId; // e.g., charging session ID, invoice ID
     private String relatedEntityType; // e.g., ChargingSession, Invoice
-    private LocalDateTime timestamp;
     
-    // Helper methods to create specific notification types
-    public static NotificationEvent createEmailEvent(UUID userId, String subject, String content, 
-                                                    String recipient, String type) {
+    // Factory methods for different notification types
+    public static NotificationEvent createEmailEvent(UUID userId, String recipient, String subject, String content) {
         return NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(userId)
-                .type(type)
+                .type("EMAIL")
                 .subject(subject)
                 .content(content)
-                .channel("EMAIL")
+                .channel("email")
                 .recipient(recipient)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
     
-    public static NotificationEvent createSmsEvent(UUID userId, String content, 
-                                                  String phoneNumber, String type) {
+    public static NotificationEvent createEmailTemplateEvent(UUID userId, String recipient, String subject, 
+                                                           String templateId, Map<String, Object> templateData) {
         return NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(userId)
-                .type(type)
-                .content(content)
-                .channel("SMS")
-                .recipient(phoneNumber)
-                .timestamp(LocalDateTime.now())
-                .build();
-    }
-    
-    public static NotificationEvent createPushEvent(UUID userId, String subject, String content, 
-                                                   String deviceToken, String type) {
-        return NotificationEvent.builder()
-                .userId(userId)
-                .type(type)
+                .type("EMAIL_TEMPLATE")
                 .subject(subject)
-                .content(content)
-                .channel("PUSH")
-                .recipient(deviceToken)
-                .timestamp(LocalDateTime.now())
-                .build();
-    }
-    
-    public static NotificationEvent createTemplatedEvent(UUID userId, String templateId, 
-                                                        Map<String, Object> templateData, 
-                                                        String channel, String recipient, String type) {
-        return NotificationEvent.builder()
-                .userId(userId)
-                .type(type)
+                .channel("email")
+                .recipient(recipient)
                 .templateId(templateId)
                 .templateData(templateData)
-                .channel(channel)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+    
+    public static NotificationEvent createSmsEvent(UUID userId, String recipient, String content) {
+        return NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .type("SMS")
+                .content(content)
+                .channel("sms")
+                .recipient(recipient)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+    
+    public static NotificationEvent createPushEvent(UUID userId, String recipient, String subject, String content) {
+        return NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .type("PUSH")
+                .subject(subject)
+                .content(content)
+                .channel("push")
                 .recipient(recipient)
                 .timestamp(LocalDateTime.now())
                 .build();

@@ -1,10 +1,7 @@
 package com.ev.notificationservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -52,4 +49,14 @@ public class Notification {
     private UUID relatedEntityId; // ID of the related entity (invoice, payment, etc.)
     
     private String relatedEntityType; // Type of the related entity (Invoice, Payment, etc.)
+    
+    @PrePersist
+    public void prePersist() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 } 

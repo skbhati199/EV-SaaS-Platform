@@ -5,69 +5,60 @@ import com.ev.notificationservice.dto.NotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
+@Slf4j
 public class KafkaProducerService {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    
+
     /**
-     * Send a notification event to the appropriate topic based on the channel
+     * Send a notification event to the appropriate Kafka topic based on the channel
      * @param event The notification event to send
-     * @return CompletableFuture of the send result
+     * @return The ID of the event that was sent
      */
-    public CompletableFuture<SendResult<String, Object>> sendNotificationEvent(NotificationEvent event) {
-        String topic = getTopicByChannel(event.getChannel());
-        String key = event.getUserId().toString();
+    public UUID sendNotificationEvent(NotificationEvent event) {
+        String channel = event.getChannel();
+        UUID userId = event.getUserId();
         
-        log.info("Sending notification event to topic {}: {}", topic, event);
+        log.info("Sending notification event to channel {}: {}", channel, event);
         
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(topic, key, event);
+        String topic = getTopicForChannel(channel);
         
-        // Also send to the all-notifications topic for analytics and auditing
-        kafkaTemplate.send(KafkaConfig.TOPIC_ALL_NOTIFICATIONS, key, event);
-        
-        future.whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Sent notification event to topic {}: offset = {}", topic, result.getRecordMetadata().offset());
-            } else {
-                log.error("Unable to send notification event to topic " + topic, ex);
-            }
-        });
-        
-        return future;
+        try {
+            // Send to the channel-specific topic
+            kafkaTemplate.send(topic, userId.toString(), event);
+            log.info("Notification event sent to topic {}", topic);
+            return event.getId();
+        } catch (Exception e) {
+            log.error("Failed to send notification event: {}", e.getMessage(), e);
+            throw e;
+        }
     }
     
     /**
-     * Send a batch of notifications in a transaction
-     * @param events The notification events to send
+     * Get the appropriate Kafka topic for the given notification channel
+     * @param channel The notification channel (email, sms, push)
+     * @return The name of the Kafka topic
      */
-    public void sendNotificationEvents(Iterable<NotificationEvent> events) {
-        events.forEach(this::sendNotificationEvent);
-    }
-    
-    /**
-     * Get the appropriate topic for the given channel
-     * @param channel The notification channel (EMAIL, SMS, PUSH)
-     * @return The Kafka topic name
-     */
-    private String getTopicByChannel(String channel) {
+    private String getTopicForChannel(String channel) {
         if (channel == null) {
-            return KafkaConfig.TOPIC_ALL_NOTIFICATIONS;
+            return KafkaConfig.EMAIL_NOTIFICATIONS_TOPIC;
         }
         
-        return switch (channel.toUpperCase()) {
-            case "EMAIL" -> KafkaConfig.TOPIC_EMAIL_NOTIFICATIONS;
-            case "SMS" -> KafkaConfig.TOPIC_SMS_NOTIFICATIONS;
-            case "PUSH" -> KafkaConfig.TOPIC_PUSH_NOTIFICATIONS;
-            default -> KafkaConfig.TOPIC_ALL_NOTIFICATIONS;
-        };
+        switch (channel.toLowerCase()) {
+            case "email":
+                return KafkaConfig.EMAIL_NOTIFICATIONS_TOPIC;
+            case "sms":
+                return KafkaConfig.SMS_NOTIFICATIONS_TOPIC;
+            case "push":
+                return KafkaConfig.PUSH_NOTIFICATIONS_TOPIC;
+            default:
+                return KafkaConfig.EMAIL_NOTIFICATIONS_TOPIC;
+        }
     }
 } 

@@ -295,7 +295,7 @@ services:
       postgres:
         condition: service_healthy
       eureka-server:
-        condition: service_healthy
+        condition: service_started
       kafka:
         condition: service_started
     networks:

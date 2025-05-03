@@ -25,11 +25,13 @@ public interface NotificationService {
     
     List<NotificationDTO> getNotificationsByUserIdAndType(UUID userId, String type);
     
-    NotificationDTO markAsSent(UUID id, LocalDateTime sentAt);
-    
     NotificationDTO markAsRead(UUID id);
+    
+    NotificationDTO markAsSent(UUID id);
     
     void sendNotifications();
     
     void deleteNotification(UUID id);
+    
+    void deleteNotificationsByUserId(UUID userId);
 } 

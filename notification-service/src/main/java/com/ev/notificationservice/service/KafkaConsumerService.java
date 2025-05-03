@@ -7,127 +7,122 @@ import com.ev.notificationservice.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
+@Slf4j
 public class KafkaConsumerService {
 
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
     private final SmsService smsService;
-    private final PushNotificationService pushService;
-    
+    private final PushNotificationService pushNotificationService;
+
     /**
-     * Listen for email notification events
-     * @param event The notification event from Kafka
+     * Consume email notification events
      */
-    @KafkaListener(topics = KafkaConfig.TOPIC_EMAIL_NOTIFICATIONS, groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumeEmailNotifications(@Payload NotificationEvent event) {
+    @KafkaListener(topics = "#{kafkaConfig.EMAIL_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
+    public void consumeEmailNotification(NotificationEvent event) {
         log.info("Received email notification event: {}", event);
+        
         try {
-            // Convert the event to a notification entity
-            Notification notification = convertToNotification(event);
+            String to = event.getRecipient();
+            String subject = event.getSubject();
+            String content = event.getContent();
+            String templateId = event.getTemplateId();
+            var templateData = event.getTemplateData();
             
-            // Process and send the email
-            boolean sent = emailService.sendEmail(
-                    event.getRecipient(),
-                    event.getSubject(),
-                    event.getContent(),
-                    event.getTemplateId(),
-                    event.getTemplateData()
-            );
+            Notification notification = createNotificationFromEvent(event);
+            notification.setSent(false);
             
-            // Update the notification status
-            notification.setSent(sent);
-            if (sent) {
+            notification = notificationRepository.save(notification);
+            
+            boolean success = emailService.sendEmail(to, subject, content, templateId, templateData);
+            
+            if (success) {
+                notification.setSent(true);
                 notification.setSentAt(LocalDateTime.now());
+                notificationRepository.save(notification);
+                
+                log.info("Email notification sent successfully: {}", subject);
+            } else {
+                log.error("Failed to send email notification");
             }
-            
-            // Save the notification
-            notificationRepository.save(notification);
-            
-            log.info("Email notification processed successfully: {}", event.getSubject());
-        } catch (Exception ex) {
-            log.error("Error processing email notification: {}", ex.getMessage(), ex);
+        } catch (Exception e) {
+            log.error("Error processing email notification", e);
         }
     }
     
     /**
-     * Listen for SMS notification events
-     * @param event The notification event from Kafka
+     * Consume SMS notification events
      */
-    @KafkaListener(topics = KafkaConfig.TOPIC_SMS_NOTIFICATIONS, groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumeSmsNotifications(@Payload NotificationEvent event) {
-        log.info("Received SMS notification event: {}", event);
+    @KafkaListener(topics = "#{kafkaConfig.SMS_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
+    public void consumeSmsNotification(NotificationEvent event) {
+        log.info("Received SMS notification event");
+        
         try {
-            // Convert the event to a notification entity
-            Notification notification = convertToNotification(event);
+            String to = event.getRecipient();
+            String content = event.getContent();
             
-            // Process and send the SMS
-            boolean sent = smsService.sendSms(
-                    event.getRecipient(),
-                    event.getContent()
-            );
+            Notification notification = createNotificationFromEvent(event);
+            notification.setSent(false);
             
-            // Update the notification status
-            notification.setSent(sent);
-            if (sent) {
+            notification = notificationRepository.save(notification);
+            
+            boolean success = smsService.sendSms(to, content);
+            
+            if (success) {
+                notification.setSent(true);
                 notification.setSentAt(LocalDateTime.now());
+                notificationRepository.save(notification);
+                
+                log.info("SMS notification sent successfully");
+            } else {
+                log.error("Failed to send SMS notification");
             }
-            
-            // Save the notification
-            notificationRepository.save(notification);
-            
-            log.info("SMS notification processed successfully");
-        } catch (Exception ex) {
-            log.error("Error processing SMS notification: {}", ex.getMessage(), ex);
+        } catch (Exception e) {
+            log.error("Error processing SMS notification", e);
         }
     }
     
     /**
-     * Listen for push notification events
-     * @param event The notification event from Kafka
+     * Consume push notification events
      */
-    @KafkaListener(topics = KafkaConfig.TOPIC_PUSH_NOTIFICATIONS, groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumePushNotifications(@Payload NotificationEvent event) {
-        log.info("Received push notification event: {}", event);
+    @KafkaListener(topics = "#{kafkaConfig.PUSH_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
+    public void consumePushNotification(NotificationEvent event) {
+        log.info("Received push notification event");
+        
         try {
-            // Convert the event to a notification entity
-            Notification notification = convertToNotification(event);
+            String to = event.getRecipient();
+            String subject = event.getSubject();
+            String content = event.getContent();
             
-            // Process and send the push notification
-            boolean sent = pushService.sendPushNotification(
-                    event.getRecipient(),
-                    event.getSubject(),
-                    event.getContent()
-            );
+            Notification notification = createNotificationFromEvent(event);
+            notification.setSent(false);
             
-            // Update the notification status
-            notification.setSent(sent);
-            if (sent) {
+            notification = notificationRepository.save(notification);
+            
+            boolean success = pushNotificationService.sendPushNotification(to, subject, content);
+            
+            if (success) {
+                notification.setSent(true);
                 notification.setSentAt(LocalDateTime.now());
+                notificationRepository.save(notification);
+                
+                log.info("Push notification sent successfully: {}", subject);
+            } else {
+                log.error("Failed to send push notification");
             }
-            
-            // Save the notification
-            notificationRepository.save(notification);
-            
-            log.info("Push notification processed successfully: {}", event.getSubject());
-        } catch (Exception ex) {
-            log.error("Error processing push notification: {}", ex.getMessage(), ex);
+        } catch (Exception e) {
+            log.error("Error processing push notification", e);
         }
     }
     
-    /**
-     * Convert a NotificationEvent to a Notification entity
-     * @param event The notification event
-     * @return The notification entity
-     */
-    private Notification convertToNotification(NotificationEvent event) {
+    private Notification createNotificationFromEvent(NotificationEvent event) {
         return Notification.builder()
                 .userId(event.getUserId())
                 .type(event.getType())

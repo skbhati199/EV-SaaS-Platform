@@ -25,78 +25,61 @@ public class EventNotificationService {
      * @return The ID of the created notification
      */
     public UUID sendNotification(NotificationEvent event) {
-        log.info("Sending notification via Kafka: {}", event);
-        kafkaProducerService.sendNotificationEvent(event);
-        
-        // We don't need to save the notification here, as it will be saved
-        // by the Kafka consumer when it processes the event
-        return null;
+        log.info("Sending notification: channel={}, recipient={}", event.getChannel(), event.getRecipient());
+        return kafkaProducerService.sendNotificationEvent(event);
     }
     
     /**
      * Send an email notification
-     * @param userId User ID
-     * @param email Email address
-     * @param subject Email subject
-     * @param content Email content
-     * @param type Notification type
+     * @param userId The ID of the user
+     * @param email The recipient's email address
+     * @param subject The email subject
+     * @param content The email content
      * @return The ID of the created notification
      */
-    public UUID sendEmailNotification(UUID userId, String email, String subject, String content, String type) {
-        NotificationEvent event = NotificationEvent.createEmailEvent(userId, subject, content, email, type);
+    public UUID sendEmailNotification(UUID userId, String email, String subject, String content) {
+        NotificationEvent event = NotificationEvent.createEmailEvent(userId, email, subject, content);
         return sendNotification(event);
     }
     
     /**
      * Send an email notification with a template
-     * @param userId User ID
-     * @param email Email address
-     * @param subject Email subject
-     * @param templateId Template ID
-     * @param templateData Template data
-     * @param type Notification type
+     * @param userId The ID of the user
+     * @param email The recipient's email address
+     * @param subject The email subject
+     * @param templateId The template ID
+     * @param templateData The template data
      * @return The ID of the created notification
      */
     public UUID sendTemplatedEmailNotification(UUID userId, String email, String subject, 
-                                               String templateId, Map<String, Object> templateData, String type) {
-        NotificationEvent event = NotificationEvent.builder()
-                .userId(userId)
-                .type(type)
-                .subject(subject)
-                .templateId(templateId)
-                .templateData(templateData)
-                .channel("EMAIL")
-                .recipient(email)
-                .timestamp(LocalDateTime.now())
-                .build();
-                
+                                             String templateId, Map<String, Object> templateData) {
+        NotificationEvent event = NotificationEvent.createEmailTemplateEvent(
+                userId, email, subject, templateId, templateData);
         return sendNotification(event);
     }
     
     /**
      * Send an SMS notification
-     * @param userId User ID
-     * @param phoneNumber Phone number
-     * @param message SMS message
-     * @param type Notification type
+     * @param userId The ID of the user
+     * @param phoneNumber The recipient's phone number
+     * @param message The SMS message
      * @return The ID of the created notification
      */
-    public UUID sendSmsNotification(UUID userId, String phoneNumber, String message, String type) {
-        NotificationEvent event = NotificationEvent.createSmsEvent(userId, message, phoneNumber, type);
+    public UUID sendSmsNotification(UUID userId, String phoneNumber, String message) {
+        NotificationEvent event = NotificationEvent.createSmsEvent(userId, phoneNumber, message);
         return sendNotification(event);
     }
     
     /**
      * Send a push notification
-     * @param userId User ID
-     * @param deviceToken Device token
-     * @param title Notification title
-     * @param message Notification message
-     * @param type Notification type
+     * @param userId The ID of the user
+     * @param deviceToken The recipient's device token
+     * @param title The notification title
+     * @param message The notification message
      * @return The ID of the created notification
      */
-    public UUID sendPushNotification(UUID userId, String deviceToken, String title, String message, String type) {
-        NotificationEvent event = NotificationEvent.createPushEvent(userId, title, message, deviceToken, type);
+    public UUID sendPushNotification(UUID userId, String deviceToken, String title, String message) {
+        NotificationEvent event = NotificationEvent.createPushEvent(userId, deviceToken, title, message);
         return sendNotification(event);
     }
 } 

@@ -46,4 +46,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     // Security methods
     Optional<Notification> findByIdAndUserId(UUID id, UUID userId);
     void deleteByIdAndUserId(UUID id, UUID userId);
+    
+    // User notification deletion
+    void deleteByUserId(UUID userId);
 } 
