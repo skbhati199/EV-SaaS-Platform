@@ -1,0 +1,51 @@
+{
+    "mcpServers": {
+      "desktop-commander": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@wonderwhy-er/desktop-commander"
+        ]
+      },
+      "graphql-wordpress": {
+        "command": "node",
+        "args": [
+          "/Users/sonukumar/Developer/mcp-projects/gql-wordpress-mcp/build/index.js"
+        ],
+        "env": {
+          "CONFIG_FILE": "/Users/sonukumar/Developer/mcp-projects/gql-wordpress-mcp/wp-json.json"
+        }
+      },
+      "unityMCP": {
+        "command": "uv",
+        "args": [
+          "--directory",
+          "/usr/local/bin/UnityMCP/UnityMcpServer/src",
+          "run",
+          "server.py"
+        ]
+      },
+      "context7-mcp": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@smithery/cli@latest",
+          "run",
+          "@upstash/context7-mcp",
+          "--key",
+          "09d74221-6a45-4ea6-a854-fd0d0aed97bd"
+        ]
+      },
+      "postgresql-mcp-server": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@smithery/cli@latest",
+          "run",
+          "@HenkDz/postgresql-mcp-server",
+          "--key",
+          "09d74221-6a45-4ea6-a854-fd0d0aed97bd"
+        ]
+      }
+    }
+  }
