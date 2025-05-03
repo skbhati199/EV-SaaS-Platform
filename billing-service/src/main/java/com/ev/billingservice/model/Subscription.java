@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +37,9 @@ public class Subscription {
     
     @Column(name = "plan_id", nullable = false)
     private UUID planId;
+    
+    @Column(nullable = false)
+    private BigDecimal price;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

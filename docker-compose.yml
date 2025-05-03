@@ -163,11 +163,15 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      # Keycloak Configuration
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
       - KEYCLOAK_REALM=evsaas
       - KEYCLOAK_RESOURCE=evsaas-client
       - KEYCLOAK_SSL_REQUIRED=external
       - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       # Swagger Configuration
       - SPRINGDOC_API_DOCS_ENABLED=true

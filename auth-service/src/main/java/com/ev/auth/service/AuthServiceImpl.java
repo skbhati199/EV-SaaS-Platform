@@ -3,7 +3,7 @@ package com.ev.auth.service;
 import com.ev.auth.dto.LoginRequest;
 import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
-import com.ev.auth.dto.UserDto;
+import com.ev.auth.dto.UserResponse;
 import com.ev.auth.exception.AuthenticationException;
 import com.ev.auth.exception.ValidationException;
 import com.ev.auth.model.Role;
@@ -29,7 +29,7 @@ public class AuthServiceImpl implements AuthService {
     
     @Override
     @Transactional
-    public UserDto registerUser(RegisterRequest request) {
+    public UserResponse registerUser(RegisterRequest request) {
         // Validate input
         validateRegistrationRequest(request);
         
@@ -50,13 +50,33 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
         log.info("User registered with ID: {}", savedUser.getId());
         
-        return mapUserToDto(savedUser);
+        return mapUserToResponse(savedUser);
     }
     
     @Override
-    public TokenResponse login(LoginRequest request) {
-        // Find user by username
-        User user = userRepository.findByUsername(request.getUsername())
+    public TokenResponse login(String email, String password) {
+        // Find user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthenticationException("Invalid credentials"));
+        
+        // Check if user is active
+        if (!user.isEnabled()) {
+            throw new AuthenticationException("Account is disabled");
+        }
+        
+        // Validate password
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AuthenticationException("Invalid credentials");
+        }
+        
+        // Get tokens from Keycloak
+        return keycloakService.getTokens(email, password);
+    }
+    
+    // Additional login method that handles 2FA (not required by interface)
+    public TokenResponse loginWith2FA(LoginRequest request, String totpCode) {
+        // Find user by email
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AuthenticationException("Invalid credentials"));
         
         // Check if user is active
@@ -72,14 +92,11 @@ public class AuthServiceImpl implements AuthService {
         // Check if 2FA is enabled
         if (user.getTwoFactorAuth() != null && user.getTwoFactorAuth().isEnabled()) {
             // If 2FA code is provided, validate it
-            if (request.getTotpCode() == null) {
+            if (totpCode == null) {
                 throw new AuthenticationException("2FA code required");
             }
             
-            boolean isValid = twoFactorAuthService.validateCode(
-                    user.getTwoFactorAuth().getSecret(),
-                    request.getTotpCode()
-            );
+            boolean isValid = twoFactorAuthService.validate(request.getEmail(), totpCode);
             
             if (!isValid) {
                 throw new AuthenticationException("Invalid 2FA code");
@@ -87,23 +104,17 @@ public class AuthServiceImpl implements AuthService {
         }
         
         // Get tokens from Keycloak
-        return keycloakService.getTokens(request.getUsername(), request.getPassword());
+        return keycloakService.getTokens(request.getEmail(), request.getPassword());
     }
     
-    @Override
-    public boolean validateToken(String token) {
-        return keycloakService.validateToken(token);
-    }
-    
-    private UserDto mapUserToDto(User user) {
-        return UserDto.builder()
+    private UserResponse mapUserToResponse(User user) {
+        return UserResponse.builder()
                 .id(user.getId())
-                .username(user.getUsername())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .role(user.getRole().name()) // Convert Role enum to String
-                .enabled(user.isEnabled())
+                .active(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

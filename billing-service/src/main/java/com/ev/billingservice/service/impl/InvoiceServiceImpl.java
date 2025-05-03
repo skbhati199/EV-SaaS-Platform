@@ -46,29 +46,29 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new BadRequestException("Invoice with number " + invoiceDTO.getInvoiceNumber() + " already exists");
         }
         
-        Invoice invoice = mapToEntity(invoiceDTO);
-        invoice = invoiceRepository.save(invoice);
+        Invoice invoiceEntity = mapToEntity(invoiceDTO);
+        final Invoice savedInvoice = invoiceRepository.save(invoiceEntity);
         
         // Save invoice items if present
         if (invoiceDTO.getInvoiceItems() != null && !invoiceDTO.getInvoiceItems().isEmpty()) {
             List<InvoiceItem> invoiceItems = invoiceDTO.getInvoiceItems().stream()
                     .map(itemDTO -> {
                         InvoiceItem item = mapItemToEntity(itemDTO);
-                        item.setInvoiceId(invoice.getId());
+                        item.setInvoiceId(savedInvoice.getId());
                         return item;
                     })
                     .collect(Collectors.toList());
             
             invoiceItemRepository.saveAll(invoiceItems);
-            invoice.setInvoiceItems(invoiceItems);
+            savedInvoice.setInvoiceItems(invoiceItems);
         }
         
         // Send notification if invoice is in ISSUED status
-        if (invoice.getStatus() == InvoiceStatus.ISSUED) {
-            notificationService.sendInvoiceCreatedNotification(invoice);
+        if (savedInvoice.getStatus() == InvoiceStatus.ISSUED) {
+            notificationService.sendInvoiceCreatedNotification(savedInvoice);
         }
         
-        return mapToDTO(invoice);
+        return mapToDTO(savedInvoice);
     }
     
     @Override

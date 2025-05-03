@@ -1,12 +1,14 @@
 package com.ev.auth.service;
 
 import com.ev.auth.dto.TwoFactorAuthRequest;
+import com.ev.auth.model.TwoFactorAuth;
 import com.ev.auth.model.User;
 import com.ev.auth.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.time.LocalDateTime;
 
 @Service
 public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
@@ -17,11 +19,23 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
         this.userRepository = userRepository;
     }
     
+    public boolean validateCode(String secretKey, String code) {
+        // This is a placeholder implementation
+        // In a real app, use TOTP algorithm to validate the code based on the secretKey
+        return true;
+    }
+    
     @Override
     public boolean validate(String username, String code) {
-        // This is a placeholder implementation
-        // In a real app, use TOTP algorithm to validate the code
-        return true;
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        if (user.getTwoFactorAuth() == null || !user.getTwoFactorAuth().isEnabled()) {
+            return true; // 2FA not enabled, so validation passes
+        }
+        
+        // Validate the 2FA code
+        return validateCode(user.getTwoFactorAuth().getSecretKey(), code);
     }
     
     @Override
@@ -39,7 +53,20 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
     public boolean enable(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setTwoFactorEnabled(true);
+        
+        // Create or update the TwoFactorAuth entity
+        TwoFactorAuth twoFactorAuth = user.getTwoFactorAuth();
+        if (twoFactorAuth == null) {
+            twoFactorAuth = new TwoFactorAuth();
+            twoFactorAuth.setUser(user);
+            twoFactorAuth.setSecretKey(generateSecret(username));
+            twoFactorAuth.setCreatedAt(LocalDateTime.now());
+        }
+        
+        twoFactorAuth.setEnabled(true);
+        twoFactorAuth.setUpdatedAt(LocalDateTime.now());
+        
+        user.setTwoFactorAuth(twoFactorAuth);
         userRepository.save(user);
         return true;
     }
@@ -48,8 +75,15 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
     public boolean disable(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setTwoFactorEnabled(false);
-        userRepository.save(user);
+        
+        TwoFactorAuth twoFactorAuth = user.getTwoFactorAuth();
+        if (twoFactorAuth != null) {
+            twoFactorAuth.setEnabled(false);
+            twoFactorAuth.setUpdatedAt(LocalDateTime.now());
+            user.setTwoFactorAuth(twoFactorAuth);
+            userRepository.save(user);
+        }
+        
         return true;
     }
     
