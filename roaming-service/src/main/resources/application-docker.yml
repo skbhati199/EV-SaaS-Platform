@@ -1,0 +1,68 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/evsaas_db
+    username: evsaas
+    password: evsaas_password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    table: flyway_schema_history
+
+server:
+  port: 8083
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    hostname: roaming-service
+
+# OCPI Configuration
+ocpi:
+  version: 2.2
+  party:
+    id: ABC
+  country:
+    code: US
+  base-path: /ocpi
+  external-url: ${OCPI_EXTERNAL_URL:http://localhost:8080}
+  role: CPO
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.ev.roamingservice: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always 

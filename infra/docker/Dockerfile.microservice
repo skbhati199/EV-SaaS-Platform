@@ -1,0 +1,30 @@
+FROM eclipse-temurin:17-jre-alpine
+
+LABEL maintainer="EV SaaS Platform Team"
+
+# Set timezone
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Create a non-root user to run the application
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Configure working directory
+WORKDIR /app
+
+# Set profile as environment variable
+ENV SPRING_PROFILES_ACTIVE=docker
+
+# Copy the JAR file
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} app.jar
+
+# Set permissions
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# Expose the application port
+EXPOSE 8080
+
+# Run the application with specific JVM options for containerization
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"] 
