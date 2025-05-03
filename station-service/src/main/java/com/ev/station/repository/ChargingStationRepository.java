@@ -23,9 +23,9 @@ public interface ChargingStationRepository extends JpaRepository<ChargingStation
     
     Page<ChargingStation> findByCpoId(UUID cpoId, Pageable pageable);
     
-    @Query("SELECT s FROM ChargingStation s WHERE " +
-           "ST_DWithin(ST_MakePoint(s.locationLongitude, s.locationLatitude)::geography, " +
-           "ST_MakePoint(?1, ?2)::geography, ?3)")
+    @Query(value = "SELECT * FROM charging_stations s WHERE " +
+           "ST_DWithin(ST_MakePoint(s.location_longitude, s.location_latitude)::geography, " +
+           "ST_MakePoint(?1, ?2)::geography, ?3)", nativeQuery = true)
     List<ChargingStation> findStationsWithinRadius(Double longitude, Double latitude, Double radiusInMeters);
     
     boolean existsBySerialNumber(String serialNumber);

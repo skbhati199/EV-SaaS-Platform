@@ -11,5 +11,7 @@ public enum StationStatus {
     CHARGING,
     SUSPENDED_EV,
     SUSPENDED_EVSE,
-    FINISHING
+    FINISHING,
+    PENDING,
+    UNKNOWN
 } 

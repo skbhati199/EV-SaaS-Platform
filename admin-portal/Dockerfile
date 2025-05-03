@@ -20,8 +20,8 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 
-# Build the application using npx
-RUN npx next build
+# Build the application using npm
+RUN npm run build
 
 # Production image
 FROM base AS runner
@@ -36,8 +36,9 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy build output and necessary files
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 # Set user
 USER nextjs
@@ -50,4 +51,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Start the application
-CMD ["node", "server.js"] 
+CMD ["npm", "start"] 

@@ -43,18 +43,18 @@ public interface ConnectorService {
     /**
      * Create a new connector
      * @param stationId The station ID
-     * @param connectorDto The connector data
+     * @param request The connector creation request
      * @return The created connector DTO
      */
-    ConnectorDto createConnector(UUID stationId, ConnectorDto connectorDto);
+    ConnectorDto createConnector(UUID stationId, CreateConnectorRequest request);
     
     /**
      * Update a connector
      * @param id The connector ID
-     * @param connectorDto The connector data
+     * @param request The connector update request
      * @return The updated connector DTO
      */
-    ConnectorDto updateConnector(UUID id, ConnectorDto connectorDto);
+    ConnectorDto updateConnector(UUID id, UpdateConnectorRequest request);
     
     /**
      * Delete a connector
@@ -64,9 +64,17 @@ public interface ConnectorService {
     
     /**
      * Update a connector's status
-     * @param stationId The station identifier (serial number)
-     * @param connectorId The connector ID (from OCPP)
+     * @param id The connector ID
      * @param status The new status
+     * @return The updated connector DTO
+     */
+    ConnectorDto updateConnectorStatus(UUID id, StationStatus status);
+    
+    /**
+     * Update a connector's status via OCPP
+     * @param stationId The station ID (serial number)
+     * @param connectorId The connector ID (from OCPP)
+     * @param status The new status (OCPP status string)
      * @return The updated connector DTO
      */
     ConnectorDto updateConnectorStatus(String stationId, int connectorId, String status);
@@ -74,9 +82,14 @@ public interface ConnectorService {
     /**
      * Count available connectors for a station
      * @param stationId The station ID
-     * @return The count of available connectors
+     * @return The number of available connectors
      */
     int countAvailableConnectorsByStationId(UUID stationId);
     
+    /**
+     * Count total connectors for a station
+     * @param stationId The station ID
+     * @return The total number of connectors
+     */
     int countTotalConnectorsByStationId(UUID stationId);
 } 

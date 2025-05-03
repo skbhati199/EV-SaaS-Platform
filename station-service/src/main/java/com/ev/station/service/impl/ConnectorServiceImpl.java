@@ -1,6 +1,8 @@
 package com.ev.station.service.impl;
 
 import com.ev.station.dto.ConnectorDto;
+import com.ev.station.dto.CreateConnectorRequest;
+import com.ev.station.dto.UpdateConnectorRequest;
 import com.ev.station.model.ChargingStation;
 import com.ev.station.model.Connector;
 import com.ev.station.model.ConnectorType;
@@ -65,19 +67,19 @@ public class ConnectorServiceImpl implements ConnectorService {
 
     @Override
     @Transactional
-    public ConnectorDto createConnector(UUID stationId, ConnectorDto connectorDto) {
+    public ConnectorDto createConnector(UUID stationId, CreateConnectorRequest request) {
         ChargingStation station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new EntityNotFoundException("Station not found with id: " + stationId));
         
         Connector connector = Connector.builder()
                 .station(station)
-                .connectorId(connectorDto.getConnectorId())
-                .connectorType(connectorDto.getConnectorType())
-                .powerType(connectorDto.getPowerType())
-                .maxVoltage(connectorDto.getMaxVoltage())
-                .maxAmperage(connectorDto.getMaxAmperage())
-                .maxPowerKw(connectorDto.getMaxPowerKw())
-                .status(connectorDto.getStatus())
+                .connectorId(request.getConnectorId())
+                .connectorType(request.getConnectorType())
+                .powerType(request.getPowerType())
+                .maxVoltage(request.getMaxVoltage())
+                .maxAmperage(request.getMaxAmperage())
+                .maxPowerKw(request.getMaxPowerKw())
+                .status(StationStatus.AVAILABLE)
                 .build();
         
         connector = connectorRepository.save(connector);
@@ -86,16 +88,28 @@ public class ConnectorServiceImpl implements ConnectorService {
 
     @Override
     @Transactional
-    public ConnectorDto updateConnector(UUID id, ConnectorDto connectorDto) {
+    public ConnectorDto updateConnector(UUID id, UpdateConnectorRequest request) {
         Connector connector = connectorRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Connector not found with id: " + id));
         
-        connector.setConnectorType(connectorDto.getConnectorType());
-        connector.setPowerType(connectorDto.getPowerType());
-        connector.setMaxVoltage(connectorDto.getMaxVoltage());
-        connector.setMaxAmperage(connectorDto.getMaxAmperage());
-        connector.setMaxPowerKw(connectorDto.getMaxPowerKw());
-        connector.setStatus(connectorDto.getStatus());
+        if (request.getConnectorType() != null) {
+            connector.setConnectorType(request.getConnectorType());
+        }
+        if (request.getPowerType() != null) {
+            connector.setPowerType(request.getPowerType());
+        }
+        if (request.getMaxVoltage() != null) {
+            connector.setMaxVoltage(request.getMaxVoltage());
+        }
+        if (request.getMaxAmperage() != null) {
+            connector.setMaxAmperage(request.getMaxAmperage());
+        }
+        if (request.getMaxPowerKw() != null) {
+            connector.setMaxPowerKw(request.getMaxPowerKw());
+        }
+        if (request.getStatus() != null) {
+            connector.setStatus(request.getStatus());
+        }
         
         connector = connectorRepository.save(connector);
         return mapToDto(connector);
@@ -108,6 +122,19 @@ public class ConnectorServiceImpl implements ConnectorService {
             throw new EntityNotFoundException("Connector not found with id: " + id);
         }
         connectorRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public ConnectorDto updateConnectorStatus(UUID id, StationStatus status) {
+        Connector connector = connectorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Connector not found with id: " + id));
+        
+        connector.setStatus(status);
+        connector.setLastStatusUpdate(LocalDateTime.now());
+        connector = connectorRepository.save(connector);
+        
+        return mapToDto(connector);
     }
 
     @Override
@@ -159,6 +186,13 @@ public class ConnectorServiceImpl implements ConnectorService {
     @Transactional(readOnly = true)
     public int countAvailableConnectorsByStationId(UUID stationId) {
         return connectorRepository.countByStationIdAndStatus(stationId, StationStatus.AVAILABLE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countTotalConnectorsByStationId(UUID stationId) {
+        List<Connector> connectors = connectorRepository.findByStationId(stationId);
+        return connectors.size();
     }
     
     /**

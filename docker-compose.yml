@@ -69,6 +69,12 @@ services:
       - "8761:8761"
     networks:
       - ev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
     # Kafka and Zookeeper for event streaming
   zookeeper:
@@ -344,6 +350,51 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+  ## Roaming Service
+  roaming-service:
+    build:
+      context: ./roaming-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-roaming
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8088
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - OCPI_EXTERNAL_URL=http://localhost:8080
+
+  ## Admin Portal
+  admin-portal:
+    build:
+      context: ./admin-portal
+      dockerfile: Dockerfile
+    container_name: ev-saas-admin-portal
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - ev-network
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://api-gateway:8080
+      - NODE_ENV=development
 
 volumes:
   postgres_data:

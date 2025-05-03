@@ -13,6 +13,7 @@ import com.ev.station.service.ChargingStationService;
 import com.ev.station.service.ConnectorService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChargingStationServiceImpl implements ChargingStationService {
 
     private final ChargingStationRepository stationRepository;
