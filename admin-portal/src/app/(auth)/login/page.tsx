@@ -32,7 +32,8 @@ export default function LoginPage() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 1000);
-    } catch (err) {
+    } catch (_err) {
+      // Using the error to set the error message
       setError('Invalid email or password');
     } finally {
       setIsLoading(false);
@@ -124,7 +125,7 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm">
           <p>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
               Contact your administrator
             </Link>

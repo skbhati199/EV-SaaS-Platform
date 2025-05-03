@@ -3,6 +3,26 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface ConnectorDetail {
+  id: number;
+  type: string;
+  status: string;
+  power: string;
+}
+
+interface StationData {
+  id: string;
+  name: string;
+  location: string;
+  status: string;
+  connectors: number;
+  model: string;
+  serialNumber: string;
+  lastConnection: string;
+  firmwareVersion: string;
+  connectorDetails: ConnectorDetail[];
+}
+
 interface StationDetailProps {
   params: {
     id: string;
@@ -11,9 +31,9 @@ interface StationDetailProps {
 
 export default function StationDetailPage({ params }: StationDetailProps) {
   const { id } = params;
-  const [station, setStation] = useState<any>(null);
+  const [station, setStation] = useState<StationData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error] = useState('');
 
   useEffect(() => {
     // In a real application, this would be an API call
@@ -217,7 +237,7 @@ export default function StationDetailPage({ params }: StationDetailProps) {
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">Connectors</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the station's connectors.</p>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">Information about the station&apos;s connectors.</p>
             </div>
             <div className="border-t border-gray-200">
               <table className="min-w-full divide-y divide-gray-200">
@@ -231,7 +251,7 @@ export default function StationDetailPage({ params }: StationDetailProps) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {station.connectorDetails.map((connector: any) => (
+                  {station.connectorDetails.map((connector: ConnectorDetail) => (
                     <tr key={connector.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{connector.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{connector.type}</td>
