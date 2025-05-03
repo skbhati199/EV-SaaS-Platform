@@ -1,7 +1,9 @@
 package com.ev.roamingservice.ocpi.module.credentials.service.impl;
 
+import com.ev.roamingservice.model.OcpiConnectionStatus;
 import com.ev.roamingservice.model.OcpiParty;
 import com.ev.roamingservice.model.OcpiToken;
+import com.ev.roamingservice.model.OcpiTokenType;
 import com.ev.roamingservice.ocpi.module.credentials.dto.Credentials;
 import com.ev.roamingservice.ocpi.module.credentials.service.CredentialsService;
 import com.ev.roamingservice.repository.OcpiPartyRepository;
@@ -14,8 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
-import java.time.ZonedDateTime;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,12 +51,10 @@ public class CredentialsServiceImpl implements CredentialsService {
         // Create the token
         OcpiToken token = new OcpiToken();
         token.setParty(party);
-        token.setTokenType("A");
-        token.setTokenA(credentials.getToken());
-        token.setTokenB(generateToken());
-        token.setTokenC(null);
-        token.setValidUntil(ZonedDateTime.now().plusMonths(3));
-        token.setStatus("ACTIVE");
+        token.setTokenType(OcpiTokenType.A);
+        token.setToken(credentials.getToken());
+        token.setValidUntil(LocalDateTime.now().plusMonths(3));
+        token.setRevoked(false);
         
         tokenRepository.save(token);
         
@@ -75,9 +75,9 @@ public class CredentialsServiceImpl implements CredentialsService {
         }
         
         // Find the token in the database
-        Optional<OcpiToken> tokenOpt = tokenRepository.findByTokenA(currentToken);
+        Optional<OcpiToken> tokenOpt = tokenRepository.findByToken(currentToken);
         
-        if (!tokenOpt.isPresent()) {
+        if (tokenOpt.isEmpty()) {
             logger.error("Token not found in database: {}", currentToken);
             throw new IllegalArgumentException("Invalid token");
         }
@@ -88,16 +88,11 @@ public class CredentialsServiceImpl implements CredentialsService {
         // Update party details
         party.setPartyId(credentials.getPartyId());
         party.setCountryCode(credentials.getCountryCode());
-        party.setRole(credentials.getRoles().get(0).getRole());
-        party.setName(credentials.getBusinessDetails().getName());
-        party.setWebsite(credentials.getBusinessDetails().getWebsite());
-        party.setLogoUrl(credentials.getBusinessDetails().getLogo() != null ? credentials.getBusinessDetails().getLogo().getUrl() : null);
+        // Update other fields as needed
         
         // Update token
-        token.setTokenA(credentials.getToken());
-        token.setTokenC(token.getTokenB());
-        token.setTokenB(generateToken());
-        token.setValidUntil(ZonedDateTime.now().plusMonths(3));
+        token.setToken(credentials.getToken());
+        token.setValidUntil(LocalDateTime.now().plusMonths(3));
         
         partyRepository.save(party);
         tokenRepository.save(token);
@@ -119,9 +114,9 @@ public class CredentialsServiceImpl implements CredentialsService {
         }
         
         // Find the token in the database
-        Optional<OcpiToken> tokenOpt = tokenRepository.findByTokenA(currentToken);
+        Optional<OcpiToken> tokenOpt = tokenRepository.findByToken(currentToken);
         
-        if (!tokenOpt.isPresent()) {
+        if (tokenOpt.isEmpty()) {
             logger.error("Token not found in database: {}", currentToken);
             throw new IllegalArgumentException("Invalid token");
         }
@@ -147,9 +142,9 @@ public class CredentialsServiceImpl implements CredentialsService {
         logger.debug("Validating token: {}", token);
         
         // Find the token in the database
-        Optional<OcpiToken> tokenOpt = tokenRepository.findByTokenA(token);
+        Optional<OcpiToken> tokenOpt = tokenRepository.findByToken(token);
         
-        if (!tokenOpt.isPresent()) {
+        if (tokenOpt.isEmpty()) {
             logger.error("Token not found in database: {}", token);
             return false;
         }
@@ -157,14 +152,14 @@ public class CredentialsServiceImpl implements CredentialsService {
         OcpiToken ocpiToken = tokenOpt.get();
         
         // Check if the token is expired
-        if (ocpiToken.getValidUntil() != null && ocpiToken.getValidUntil().isBefore(ZonedDateTime.now())) {
+        if (ocpiToken.getValidUntil() != null && ocpiToken.getValidUntil().isBefore(LocalDateTime.now())) {
             logger.error("Token expired: {}", token);
             return false;
         }
         
-        // Check if the token is active
-        if (!"ACTIVE".equals(ocpiToken.getStatus())) {
-            logger.error("Token not active: {}", token);
+        // Check if the token is revoked
+        if (ocpiToken.isRevoked()) {
+            logger.error("Token revoked: {}", token);
             return false;
         }
         
@@ -210,12 +205,10 @@ public class CredentialsServiceImpl implements CredentialsService {
             party = new OcpiParty();
             party.setPartyId(credentials.getPartyId());
             party.setCountryCode(credentials.getCountryCode());
+            party.setStatus(OcpiConnectionStatus.PENDING);
         }
         
-        party.setRole(credentials.getRoles().get(0).getRole());
-        party.setName(credentials.getBusinessDetails().getName());
-        party.setWebsite(credentials.getBusinessDetails().getWebsite());
-        party.setLogoUrl(credentials.getBusinessDetails().getLogo() != null ? credentials.getBusinessDetails().getLogo().getUrl() : null);
+        // Set other fields as needed from credentials
         
         return partyRepository.save(party);
     }

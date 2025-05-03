@@ -8,31 +8,31 @@ import com.ev.roamingservice.ocpi.module.credentials.dto.Credentials;
 public interface CredentialsService {
 
     /**
-     * Store credentials from an OCPI client
+     * Store credentials for a party
      * @param credentials the credentials to store
      */
     void storeCredentials(Credentials credentials);
 
     /**
-     * Update credentials from an OCPI client
-     * @param credentials the credentials to update
+     * Update credentials for a party
+     * @param credentials the updated credentials
      */
     void updateCredentials(Credentials credentials);
 
     /**
-     * Delete credentials for an OCPI client
+     * Delete credentials for the authenticated party
      */
     void deleteCredentials();
 
     /**
      * Get credentials by token
      * @param token the token to look up
-     * @return the credentials or null if not found
+     * @return the credentials if found, null otherwise
      */
     Credentials getCredentialsByToken(String token);
 
     /**
-     * Validate a token from an OCPI client
+     * Validate a token
      * @param token the token to validate
      * @return true if the token is valid, false otherwise
      */

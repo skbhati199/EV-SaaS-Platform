@@ -2,98 +2,90 @@ package com.ev.roamingservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Standard OCPI response object as per OCPI 2.2 specification
+ * Standard OCPI response format as per OCPI 2.2 specification
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class OcpiResponse<T> {
-
+    
     @JsonProperty("status_code")
-    private int statusCode;
-
+    private Integer statusCode;
+    
     @JsonProperty("status_message")
     private String statusMessage;
-
-    @JsonProperty("data")
-    private T data;
-
+    
     @JsonProperty("timestamp")
     private String timestamp;
-
-    // Standard OCPI status codes
-    public enum StatusCode {
-        SUCCESS(1000),
-        CLIENT_ERROR(2000),
-        SERVER_ERROR(3000),
-        HUB_ERROR(4000);
-
-        private final int code;
-
-        StatusCode(int code) {
-            this.code = code;
-        }
-
-        public int getCode() {
-            return code;
-        }
-    }
-
-    // Constructors
-    public OcpiResponse() {
-        this.timestamp = java.time.Instant.now().toString();
-    }
-
-    public OcpiResponse(int statusCode, String statusMessage, T data) {
-        this();
-        this.statusCode = statusCode;
-        this.statusMessage = statusMessage;
-        this.data = data;
-    }
-
-    // Static factory methods for common responses
+    
+    @JsonProperty("data")
+    private T data;
+    
+    /**
+     * Create a successful response
+     * 
+     * @param data The data to include in the response
+     * @return The success response
+     */
     public static <T> OcpiResponse<T> success(T data) {
-        return new OcpiResponse<>(StatusCode.SUCCESS.getCode(), "Success", data);
+        return OcpiResponse.<T>builder()
+                .statusCode(1000)
+                .statusMessage("Success")
+                .timestamp(java.time.ZonedDateTime.now().toString())
+                .data(data)
+                .build();
     }
-
+    
+    /**
+     * Create a generic error response
+     * 
+     * @param statusCode The error code
+     * @param message The error message
+     * @return The error response
+     */
+    public static <T> OcpiResponse<T> error(int statusCode, String message) {
+        return OcpiResponse.<T>builder()
+                .statusCode(statusCode)
+                .statusMessage(message)
+                .timestamp(java.time.ZonedDateTime.now().toString())
+                .build();
+    }
+    
+    /**
+     * Create a 'not found' error response
+     * 
+     * @param message The error message
+     * @return The not found response
+     */
+    public static <T> OcpiResponse<T> notFound(String message) {
+        return error(2004, message);
+    }
+    
+    /**
+     * Create a 'client error' response
+     * 
+     * @param message The error message
+     * @return The client error response
+     */
     public static <T> OcpiResponse<T> clientError(String message) {
-        return new OcpiResponse<>(StatusCode.CLIENT_ERROR.getCode(), message, null);
+        return error(2001, message);
     }
-
+    
+    /**
+     * Create a 'server error' response
+     * 
+     * @param message The error message
+     * @return The server error response
+     */
     public static <T> OcpiResponse<T> serverError(String message) {
-        return new OcpiResponse<>(StatusCode.SERVER_ERROR.getCode(), message, null);
-    }
-
-    // Getters and setters
-    public int getStatusCode() {
-        return statusCode;
-    }
-
-    public void setStatusCode(int statusCode) {
-        this.statusCode = statusCode;
-    }
-
-    public String getStatusMessage() {
-        return statusMessage;
-    }
-
-    public void setStatusMessage(String statusMessage) {
-        this.statusMessage = statusMessage;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
-    }
-
-    public String getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
+        return error(3000, message);
     }
 } 
