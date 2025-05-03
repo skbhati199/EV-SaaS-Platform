@@ -7,25 +7,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 /**
- * DTO for OCPI Credentials module
+ * Role object as per OCPI 2.2 specification
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Credentials {
-    @JsonProperty("token")
-    private String token;
-    
-    @JsonProperty("url")
-    private String url;
-    
-    @JsonProperty("roles")
-    private List<CredentialsRole> roles;
+public class Role {
+    @JsonProperty("role")
+    private String role;
     
     @JsonProperty("business_details")
     private BusinessDetails businessDetails;

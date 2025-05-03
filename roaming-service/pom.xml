@@ -124,6 +124,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.ev.roamingservice.SimpleHttpServer</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

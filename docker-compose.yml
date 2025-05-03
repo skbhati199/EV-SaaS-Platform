@@ -360,34 +360,22 @@ services:
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
-  ## Roaming Service
+  ## Roaming Service for OCPI protocol
   roaming-service:
     build:
       context: ./roaming-service
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.simple
     container_name: ev-saas-roaming
     ports:
       - "8088:8088"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
     networks:
       - ev-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
-      - SPRING_DATASOURCE_USERNAME=evsaas
-      - SPRING_DATASOURCE_PASSWORD=evsaas_password
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SERVER_PORT=8088
-      - SPRING_FLYWAY_ENABLED=false
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
-      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
-      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - OCPI_EXTERNAL_URL=http://localhost:8080
+      - OCPI_EXTERNAL_URL=http://roaming-service:8088
+      - OCPI_PARTY_ID=EVP
+      - OCPI_COUNTRY_CODE=US
+      - OCPI_ROLE=CPO
 
   ## Admin Portal
   admin-portal:

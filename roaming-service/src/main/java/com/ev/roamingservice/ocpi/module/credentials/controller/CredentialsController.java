@@ -2,7 +2,10 @@ package com.ev.roamingservice.ocpi.module.credentials.controller;
 
 import com.ev.roamingservice.config.OcpiConfig;
 import com.ev.roamingservice.dto.OcpiResponse;
+import com.ev.roamingservice.ocpi.module.credentials.dto.BusinessDetails;
 import com.ev.roamingservice.ocpi.module.credentials.dto.Credentials;
+import com.ev.roamingservice.ocpi.module.credentials.dto.CredentialsRole;
+import com.ev.roamingservice.ocpi.module.credentials.dto.Image;
 import com.ev.roamingservice.ocpi.module.credentials.service.CredentialsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -84,26 +87,32 @@ public class CredentialsController {
         // In a real implementation, we would generate a new token and store it
         String token = UUID.randomUUID().toString();
         
-        Credentials.BusinessDetails businessDetails = new Credentials.BusinessDetails(
-                "EV SaaS Platform", 
-                "https://ev-saas-platform.com", 
-                new Credentials.Image("https://ev-saas-platform.com/logo.png", null, "OPERATOR", "png", 512, 512)
-        );
+        BusinessDetails businessDetails = BusinessDetails.builder()
+                .name("EV SaaS Platform")
+                .website("https://ev-saas-platform.com")
+                .logo(Image.builder()
+                        .url("https://ev-saas-platform.com/logo.png")
+                        .category("OPERATOR")
+                        .type("png")
+                        .width(512)
+                        .height(512)
+                        .build())
+                .build();
         
-        Credentials.Role role = new Credentials.Role(
-                ocpiConfig.getRole(),
-                businessDetails,
-                ocpiConfig.getPartyId(),
-                ocpiConfig.getCountryCode()
-        );
+        CredentialsRole role = CredentialsRole.builder()
+                .role(ocpiConfig.getRole())
+                .businessDetails(businessDetails)
+                .partyId(ocpiConfig.getPartyId())
+                .countryCode(ocpiConfig.getCountryCode())
+                .build();
         
-        return new Credentials(
-                token,
-                ocpiConfig.getExternalUrl() + ocpiConfig.getBasePath(),
-                businessDetails,
-                ocpiConfig.getPartyId(),
-                ocpiConfig.getCountryCode(),
-                Collections.singletonList(role)
-        );
+        return Credentials.builder()
+                .token(token)
+                .url(ocpiConfig.getExternalUrl() + ocpiConfig.getBasePath())
+                .businessDetails(businessDetails)
+                .partyId(ocpiConfig.getPartyId())
+                .countryCode(ocpiConfig.getCountryCode())
+                .roles(Collections.singletonList(role))
+                .build();
     }
 } 
