@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,8 +47,8 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-green dark:bg-gradient-to-br dark:from-gray-900 dark:to-green-900">
-      <aside className="w-64 bg-white/90 dark:bg-gray-900/90 shadow-md flex flex-col">
+    <div className="flex min-h-screen bg-gradient-to-br from-white to-green-50 dark:bg-gradient-to-br dark:from-gray-900 dark:to-green-950/40">
+      <aside className="w-64 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-md flex flex-col border-r border-gray-200 dark:border-gray-800">
         <div className="h-16 flex items-center justify-between px-6 font-bold text-xl border-b border-gray-200 dark:border-gray-800">
           <span>EV SaaS Admin</span>
           <ThemeToggle />
