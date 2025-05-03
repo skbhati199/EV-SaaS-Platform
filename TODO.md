@@ -81,7 +81,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 ---
 
 ## 🔌 Protocol Support
-- [ ] OCPP 1.6/2.0.1 (WebSocket)
+- [x] OCPP 1.6/2.0.1 (WebSocket)
 - [ ] OCPI 2.2 (REST-based P2P)
 - [ ] OpenADR (for grid communication)
 - [ ] ISO 15118 (V2G/Plug & Charge - future scope)
@@ -110,7 +110,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Set up mono repo with TurboRepo
 - [ ] Setup PostgreSQL DB and schema migration (Flyway)
 - [ ] Implement Auth + EVSE registration
-- [ ] Integrate OCPP 1.6 backend
+- [x] Integrate OCPP 1.6 backend
 - [ ] Basic Admin UI (Next.js 14)
 
 ### Phase 2: Protocol & Roaming
