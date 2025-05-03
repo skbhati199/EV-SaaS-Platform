@@ -135,7 +135,7 @@ ev-saas-platform/
 │   ├── roaming-service/      # OCPI API and peer-to-peer roaming
 │   ├── smart-charging/       # Demand response and smart charging
 │   ├── billing-service/      # Billing, CDRs, tariffs, Stripe/UPI etc.
-│   ├── notification-service/ # Kafka-based email/sms/push notification
+│   ├── notification-service/ # Kafka-based email/sms/push notification ✅
 │   └── scheduler-service/    # Cron jobs, V2G, background tasks ✅
 │
 ├── libs/

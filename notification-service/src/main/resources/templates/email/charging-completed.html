@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charging Session Completed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .session-details {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .details-label {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .details-value {
+            flex: 2;
+            text-align: right;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Charging Session Completed</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello <span th:text="${userName}">User</span>,</p>
+
+        <p>Your charging session has been successfully completed at <span th:text="${stationName}">Station</span>.</p>
+
+        <div class="session-details">
+            <h3>Session Details:</h3>
+
+            <div class="details-row">
+                <span class="details-label">Station:</span>
+                <span class="details-value" th:text="${stationName}">Station Name</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Start Time:</span>
+                <span class="details-value" th:text="${startTime}">12:00 PM</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">End Time:</span>
+                <span class="details-value" th:text="${endTime}">14:00 PM</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Duration:</span>
+                <span class="details-value" th:text="${duration}">2 hours</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Energy Delivered:</span>
+                <span class="details-value" th:text="${energyKWh} + ' kWh'">30 kWh</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Total Cost:</span>
+                <span class="details-value" th:text="${currency} + ' ' + ${totalCost}">$15.00</span>
+            </div>
+        </div>
+
+        <p>An invoice has been created for this session and will be processed according to your payment settings.</p>
+
+        <a th:href="${dashboardUrl}" class="cta-button">View Session Details</a>
+
+        <p>Thank you for using our charging services!</p>
+
+        <p>Best regards,<br>The EV Charging Team</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>© 2024 EV SaaS Platform. All rights reserved.</p>
+    </div>
+</body>
+
+</html>
