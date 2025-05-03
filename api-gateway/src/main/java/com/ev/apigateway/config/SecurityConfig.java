@@ -35,8 +35,18 @@ public class SecurityConfig {
                         .pathMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                         .pathMatchers("/ocpi/versions", "/ocpi/2.2/credentials").permitAll()
                         
-                        // Swagger/OpenAPI endpoints
+                        // Swagger/OpenAPI endpoints for API Gateway
                         .pathMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/webjars/**").permitAll()
+                        
+                        // Swagger/OpenAPI endpoints for individual services
+                        .pathMatchers("/api/*/v3/api-docs/**").permitAll()
+                        .pathMatchers("/api/*/swagger-ui/**").permitAll()
+                        .pathMatchers("/api/*/swagger-ui.html").permitAll()
+                        .pathMatchers("/api/*/swagger-resources/**").permitAll()
+                        .pathMatchers("/api/*/webjars/**").permitAll()
+                        
+                        // OCPI endpoints
+                        .pathMatchers("/ocpi/**").permitAll()
                         
                         // Actuator endpoints
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()

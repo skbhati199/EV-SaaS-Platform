@@ -1,4 +1,4 @@
-package com.ev.billingservice.config;
+package com.ev.roamingservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,20 +18,26 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
+                // OCPI protocol endpoints - typically authenticated using token headers, not JWTs
+                .requestMatchers("/ocpi/**").permitAll()
+                
                 // Actuator endpoints
                 .requestMatchers("/actuator/**").permitAll()
-                // Public billing endpoints
-                .requestMatchers("/api/v1/billing/public/**").permitAll()
+                
                 // Swagger / OpenAPI endpoints
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/webjars/**").permitAll()
+                
                 // All other requests need authentication
-                .anyRequest().authenticated())
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}))
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            );
         
         return http.build();
     }
