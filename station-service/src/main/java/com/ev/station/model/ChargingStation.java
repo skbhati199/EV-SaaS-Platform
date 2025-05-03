@@ -73,6 +73,7 @@ public class ChargingStation {
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Connector> connectors = new ArrayList<>();
     
     @PrePersist
