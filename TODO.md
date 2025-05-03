@@ -121,6 +121,15 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 
 ---
 
+## 📑 API Documentation
+- [ ] Implement Swagger/OpenAPI for all services
+- [ ] Create API usage documentation
+- [ ] Standardize API error responses
+- [ ] API versioning strategy
+- [ ] API testing suite
+
+---
+
 ## 📈 Scalability Features
 - [x] Microservices architecture
 - [ ] Load balancer implementation

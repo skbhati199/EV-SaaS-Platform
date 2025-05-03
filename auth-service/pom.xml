@@ -30,6 +30,7 @@
         <java.version>17</java.version>
         <spring-cloud.version>2023.0.2</spring-cloud.version>
         <keycloak.version>24.0.1</keycloak.version>
+        <springdoc.version>2.4.0</springdoc.version>
     </properties>
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -66,6 +67,13 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+        
+        <!-- OpenAPI Documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         
         <!-- Keycloak Integration -->

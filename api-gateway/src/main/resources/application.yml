@@ -7,6 +7,14 @@ spring:
   cloud:
     gateway:
       routes:
+        # Swagger UI Route
+        - id: openapi
+          uri: http://localhost:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**,/swagger-ui/**,/webjars/swagger-ui/**
+          filters:
+            - RewritePath=/swagger-ui/(?<segment>.*), /webjars/swagger-ui/$\{segment}
+        
         # Auth Service Routes
         - id: auth-service
           uri: lb://auth-service
@@ -85,6 +93,37 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://auth-service/oauth2/jwks
+
+# OpenAPI Documentation Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    urls:
+      - url: /v3/api-docs
+        name: API Gateway
+      - url: /api/auth/v3/api-docs
+        name: Auth Service
+      - url: /api/users/v3/api-docs
+        name: User Service
+      - url: /api/stations/v3/api-docs
+        name: Station Service
+      - url: /api/roaming/v3/api-docs
+        name: Roaming Service
+      - url: /api/billing/v3/api-docs
+        name: Billing Service
+      - url: /api/smart-charging/v3/api-docs
+        name: Smart Charging Service
+      - url: /api/notifications/v3/api-docs
+        name: Notification Service
+  cache:
+    disabled: true
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
 
 # Eureka Discovery Service Config
 eureka:

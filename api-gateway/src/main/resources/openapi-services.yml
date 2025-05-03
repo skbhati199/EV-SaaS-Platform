@@ -1,0 +1,100 @@
+services:
+  - name: Auth Service
+    description: Authentication and authorization service
+    baseUrl: /api/auth
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /login
+        method: POST
+        description: Authenticate user and get access token
+      - path: /register
+        method: POST
+        description: Register a new user
+      - path: /refresh
+        method: POST
+        description: Refresh access token
+        
+  - name: User Service
+    description: User management service
+    baseUrl: /api/users
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /{id}
+        method: GET
+        description: Get user details by ID
+      - path: /{id}
+        method: PUT
+        description: Update user details
+      - path: /
+        method: GET
+        description: Get all users with pagination
+        
+  - name: Station Service
+    description: Charging station management service
+    baseUrl: /api/stations
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /{id}
+        method: GET
+        description: Get station details by ID
+      - path: /
+        method: GET
+        description: Get all stations with filters
+      - path: /{id}/connectors
+        method: GET
+        description: Get all connectors for a station
+        
+  - name: Billing Service
+    description: Billing and payment service
+    baseUrl: /api/billing
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /invoices
+        method: GET
+        description: Get all invoices
+      - path: /transactions
+        method: GET
+        description: Get all billing transactions
+        
+  - name: Roaming Service
+    description: OCPI-based roaming service
+    baseUrl: /api/roaming
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /locations
+        method: GET
+        description: Get all roaming locations
+      - path: /tokens
+        method: GET
+        description: Get all roaming tokens
+        
+  - name: Smart Charging Service
+    description: Smart charging algorithms and load balancing
+    baseUrl: /api/smart-charging
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /sessions
+        method: GET
+        description: Get all active smart charging sessions
+      - path: /profiles
+        method: GET
+        description: Get all smart charging profiles
+        
+  - name: Notification Service
+    description: User notification service (email, SMS, push)
+    baseUrl: /api/notifications
+    apiDocsUrl: /v3/api-docs
+    version: 1.0.0
+    endpoints:
+      - path: /preferences
+        method: GET
+        description: Get user notification preferences
+      - path: /history
+        method: GET
+        description: Get notification history for a user 

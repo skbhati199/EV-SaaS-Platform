@@ -2,6 +2,14 @@ package com.ev.auth.controller;
 
 import com.ev.auth.dto.UserResponse;
 import com.ev.auth.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +24,25 @@ import java.util.UUID;
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "User Management", description = "User management operations")
+@SecurityRequirement(name = "bearer-jwt")
 public class UserController {
 
     private final UserService userService;
     
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get all users",
+        description = "Retrieves a list of all users in the system (Admin only)",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "List of users retrieved successfully", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         log.info("Fetching all users");
         List<UserResponse> users = userService.getAllUsers();
@@ -30,7 +51,21 @@ public class UserController {
     
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.subject")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
+    @Operation(
+        summary = "Get user by ID",
+        description = "Retrieves user details by user ID (Admin or own account)",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User found", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    public ResponseEntity<UserResponse> getUserById(
+            @Parameter(description = "User ID", required = true)
+            @PathVariable UUID id) {
         log.info("Fetching user with ID: {}", id);
         
         Optional<UserResponse> userResponse = userService.getUserById(id);
@@ -41,7 +76,21 @@ public class UserController {
     
     @GetMapping("/email/{email}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> getUserByEmail(@PathVariable String email) {
+    @Operation(
+        summary = "Get user by email",
+        description = "Retrieves user details by email (Admin only)",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User found", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    public ResponseEntity<UserResponse> getUserByEmail(
+            @Parameter(description = "User email", required = true)
+            @PathVariable String email) {
         log.info("Fetching user with email: {}", email);
         
         Optional<UserResponse> userResponse = userService.getUserByEmail(email);
@@ -52,7 +101,21 @@ public class UserController {
     
     @PutMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> deactivateUser(@PathVariable UUID id) {
+    @Operation(
+        summary = "Deactivate user",
+        description = "Deactivates a user account (Admin only)",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User deactivated successfully", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    public ResponseEntity<UserResponse> deactivateUser(
+            @Parameter(description = "User ID", required = true)
+            @PathVariable UUID id) {
         log.info("Deactivating user with ID: {}", id);
         
         UserResponse userResponse = userService.deactivateUser(id);
@@ -61,7 +124,21 @@ public class UserController {
     
     @PutMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> activateUser(@PathVariable UUID id) {
+    @Operation(
+        summary = "Activate user",
+        description = "Activates a deactivated user account (Admin only)",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User activated successfully", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    public ResponseEntity<UserResponse> activateUser(
+            @Parameter(description = "User ID", required = true)
+            @PathVariable UUID id) {
         log.info("Activating user with ID: {}", id);
         
         UserResponse userResponse = userService.activateUser(id);
