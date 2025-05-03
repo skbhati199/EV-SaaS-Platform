@@ -135,6 +135,8 @@ services:
     build:
       context: ./auth-service
       dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
     container_name: ev-saas-auth
     ports:
       - "8081:8081"
@@ -229,6 +231,9 @@ services:
     build:
       context: ./station-service
       dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
+        - SPRING_PROFILES_ACTIVE=local
     container_name: ev-saas-station
     ports:
       - "8084:8084"
@@ -285,6 +290,9 @@ services:
     build:
       context: ./notification-service
       dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
+        - SPRING_PROFILES_ACTIVE=local
     container_name: ev-saas-notification
     ports:
       - "8087:8087"

@@ -1,6 +1,9 @@
 FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /workspace/app
 
+# Default Maven arguments if not provided
+ARG MAVEN_ARGS="clean package -DskipTests"
+
 # Copy maven executable, pom.xml and source code
 COPY mvnw .
 COPY .mvn .mvn
@@ -8,11 +11,14 @@ COPY pom.xml .
 COPY src src
 
 # Package the application
-RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn ${MAVEN_ARGS}
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+
+# Default Spring profile if not provided
+ARG SPRING_PROFILES_ACTIVE=docker
 
 # Set timezone
 ENV TZ=UTC
@@ -29,7 +35,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Environment variables
-ENV SPRING_PROFILES_ACTIVE=docker
+ENV SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
 ENV JAVA_OPTS=""
 
 # Expose the application port

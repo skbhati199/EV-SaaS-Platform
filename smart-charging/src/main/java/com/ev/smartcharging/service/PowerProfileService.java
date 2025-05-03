@@ -6,6 +6,7 @@ import com.ev.smartcharging.model.PriceTier;
 import java.util.List;
 import java.util.UUID;
 
+
 public interface PowerProfileService {
     List<PowerProfileDto> getAllPowerProfiles();
     PowerProfileDto getPowerProfileById(UUID id);
