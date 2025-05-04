@@ -174,4 +174,6 @@ class NotificationService extends ApiService {
   }
 }
 
-export default new NotificationService(); 
+// Assign instance to a variable before exporting
+const notificationService = new NotificationService();
+export { notificationService }; 

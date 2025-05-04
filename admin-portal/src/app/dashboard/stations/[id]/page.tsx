@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Badge } from "@/components/ui/badge";
@@ -44,11 +44,7 @@ export default function StationDetailPage({ params }: StationDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [isRebooting, setIsRebooting] = useState(false);
 
-  useEffect(() => {
-    fetchStationDetails();
-  }, [id]);
-
-  const fetchStationDetails = async () => {
+  const fetchStationDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -60,7 +56,11 @@ export default function StationDetailPage({ params }: StationDetailProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchStationDetails();
+  }, [id, fetchStationDetails]);
 
   const handleRebootStation = async () => {
     if (!station) return;

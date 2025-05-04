@@ -31,13 +31,13 @@ const formSchema = z.object({
     city: z.string().min(2, { message: "City is required" }),
     zipCode: z.string().min(2, { message: "Zip code is required" }),
     country: z.string().min(2, { message: "Country is required" }),
-    latitude: z.number().or(z.string().transform(Number)),
-    longitude: z.number().or(z.string().transform(Number)),
+    latitude: z.coerce.number(),
+    longitude: z.coerce.number(),
   }),
   connectors: z.array(z.object({
     id: z.string().optional(),
     type: z.string().min(2, { message: "Connector type is required" }),
-    maxPower: z.number().or(z.string().transform(Number)),
+    maxPower: z.coerce.number(),
     status: z.string().optional(),
   })).min(1, { message: "At least one connector is required" }),
 });
@@ -124,11 +124,22 @@ export default function StationForm({ stationId, isEditing = false }: StationFor
     setLoading(true);
     setError(null);
     try {
+      // Process data to match API expectations
+      const processedData: Partial<Station> = {
+        ...data,
+        connectors: data.connectors.map(connector => ({
+          ...connector,
+          id: connector.id || '', // Ensure id is a string, not undefined
+          maxPower: Number(connector.maxPower),
+          status: (connector.status || 'AVAILABLE') as 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'UNAVAILABLE' | 'FAULTED'
+        }))
+      };
+      
       if (isEditing && stationId) {
-        await stationService.updateStation(stationId, data);
+        await stationService.updateStation(stationId, processedData);
         router.push(`/dashboard/stations/${stationId}`);
       } else {
-        const newStation = await stationService.createStation(data);
+        const newStation = await stationService.createStation(processedData);
         router.push(`/dashboard/stations/${newStation.id}`);
       }
     } catch (err) {

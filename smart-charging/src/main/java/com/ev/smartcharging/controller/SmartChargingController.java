@@ -5,6 +5,7 @@ import com.ev.smartcharging.model.SessionStatus;
 import com.ev.smartcharging.service.SmartChargingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,12 +19,14 @@ public class SmartChargingController {
     private final SmartChargingService smartChargingService;
 
     @PostMapping("/groups/{groupId}/allocate-power")
+    @PreAuthorize("hasRole('ROLE_admin')")
     public ResponseEntity<Boolean> allocateGroupPower(@PathVariable UUID groupId) {
         boolean success = smartChargingService.allocateGroupPower(groupId);
         return ResponseEntity.ok(success);
     }
 
     @PostMapping("/sessions/{sessionId}/adjust-power")
+    @PreAuthorize("hasRole('ROLE_admin')")
     public ResponseEntity<Boolean> adjustSessionPower(
             @PathVariable UUID sessionId, @RequestParam Double powerKW) {
         boolean success = smartChargingService.adjustSessionPower(sessionId, powerKW);
@@ -31,6 +34,7 @@ public class SmartChargingController {
     }
 
     @PutMapping("/sessions/{sessionId}/status")
+    @PreAuthorize("hasRole('ROLE_admin')")
     public ResponseEntity<Boolean> updateSessionStatus(
             @PathVariable UUID sessionId, @RequestParam SessionStatus status) {
         boolean success = smartChargingService.updateSessionStatus(sessionId, status);
@@ -38,12 +42,14 @@ public class SmartChargingController {
     }
 
     @GetMapping("/groups/{groupId}/optimal-power")
+    @PreAuthorize("hasAnyRole('ROLE_admin', 'ROLE_operator')")
     public ResponseEntity<List<ChargingStationDto>> calculateOptimalPowerAllocation(@PathVariable UUID groupId) {
         List<ChargingStationDto> stations = smartChargingService.calculateOptimalPowerAllocation(groupId);
         return ResponseEntity.ok(stations);
     }
 
     @PostMapping("/sessions/{sessionId}/started")
+    @PreAuthorize("hasAnyRole('ROLE_admin', 'ROLE_operator')")
     public ResponseEntity<Boolean> handleSessionStarted(
             @PathVariable UUID sessionId,
             @RequestParam UUID stationId,
@@ -54,6 +60,7 @@ public class SmartChargingController {
     }
 
     @PostMapping("/sessions/{sessionId}/ended")
+    @PreAuthorize("hasAnyRole('ROLE_admin', 'ROLE_operator')")
     public ResponseEntity<Boolean> handleSessionEnded(@PathVariable UUID sessionId) {
         boolean success = smartChargingService.handleSessionEnded(sessionId);
         return ResponseEntity.ok(success);

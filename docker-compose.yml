@@ -150,7 +150,7 @@ services:
       - "8081:8081"
     depends_on:
       keycloak:
-        condition: healthcheck
+        condition: service_healthy
       postgres:
         condition: service_healthy
       eureka-server:
@@ -356,6 +356,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      keycloak:
+        condition: service_healthy
       eureka-server:
         condition: service_started
     networks:
@@ -373,6 +375,9 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Keycloak Configuration
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
 
   ## Roaming Service for OCPI protocol
   roaming-service:

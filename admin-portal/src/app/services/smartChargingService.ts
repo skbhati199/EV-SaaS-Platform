@@ -282,4 +282,6 @@ class SmartChargingService extends ApiService {
   }
 }
 
-export default new SmartChargingService(); 
+// Assign instance to a variable before exporting
+const smartChargingService = new SmartChargingService();
+export { smartChargingService }; 

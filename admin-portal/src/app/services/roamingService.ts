@@ -222,4 +222,6 @@ class RoamingService extends ApiService {
   }
 }
 
-export default new RoamingService(); 
+// Assign instance to a variable before exporting
+const roamingService = new RoamingService();
+export { roamingService }; 

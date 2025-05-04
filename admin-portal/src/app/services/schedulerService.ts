@@ -146,4 +146,6 @@ class SchedulerService extends ApiService {
   }
 }
 
-export default new SchedulerService(); 
+// Assign instance to a variable before exporting
+const schedulerService = new SchedulerService();
+export { schedulerService }; 

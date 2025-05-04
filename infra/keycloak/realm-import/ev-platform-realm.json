@@ -62,6 +62,25 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
             "standardFlowEnabled": true
+        },
+        {
+            "clientId": "smart-charging",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "defaultClientSecret",
+            "publicClient": false,
+            "redirectUris": [
+                "http://localhost:8085/*",
+                "http://smart-charging:8085/*"
+            ],
+            "webOrigins": [
+                "+"
+            ],
+            "protocol": "openid-connect",
+            "serviceAccountsEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "standardFlowEnabled": true
         }
     ],
     "roles": {

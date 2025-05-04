@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Card, 
@@ -55,7 +55,7 @@ export default function StationsPage() {
     limit: 10,
   });
 
-  const fetchStations = async () => {
+  const fetchStations = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -71,11 +71,11 @@ export default function StationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filters]);
 
   useEffect(() => {
     fetchStations();
-  }, [currentPage, filters]);
+  }, [fetchStations]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

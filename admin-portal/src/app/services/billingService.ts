@@ -238,4 +238,6 @@ class BillingService extends ApiService {
   }
 }
 
-export default new BillingService(); 
+// Assign instance to a variable before exporting
+const billingService = new BillingService();
+export { billingService }; 

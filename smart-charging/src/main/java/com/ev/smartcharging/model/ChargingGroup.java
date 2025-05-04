@@ -46,6 +46,7 @@ public class ChargingGroup {
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "chargingGroup", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<ChargingStation> stations = new HashSet<>();
     
     @PrePersist

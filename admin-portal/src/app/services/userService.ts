@@ -1,5 +1,5 @@
 import { ApiService } from './api';
-import { UserProfile } from './authService';
+import { User } from './authService';
 
 export interface UserCreateData {
   email: string;
@@ -34,23 +34,23 @@ class UserService extends ApiService {
   }
 
   // Get all users with pagination
-  async getUsers(page = 0, size = 10): Promise<PaginatedResponse<UserProfile>> {
-    return this.get<PaginatedResponse<UserProfile>>('', { params: { page, size } });
+  async getUsers(page = 0, size = 10): Promise<PaginatedResponse<User>> {
+    return this.get<PaginatedResponse<User>>('', { params: { page, size } });
   }
 
   // Get user by ID
-  async getUser(id: string): Promise<UserProfile> {
-    return this.get<UserProfile>(`/${id}`);
+  async getUser(id: string): Promise<User> {
+    return this.get<User>(`/${id}`);
   }
 
   // Create new user (admin function)
-  async createUser(userData: UserCreateData): Promise<UserProfile> {
-    return this.post<UserProfile>('', userData);
+  async createUser(userData: UserCreateData): Promise<User> {
+    return this.post<User>('', userData);
   }
 
   // Update user
-  async updateUser(id: string, userData: UserUpdateData): Promise<UserProfile> {
-    return this.put<UserProfile>(`/${id}`, userData);
+  async updateUser(id: string, userData: UserUpdateData): Promise<User> {
+    return this.put<User>(`/${id}`, userData);
   }
 
   // Delete user
@@ -72,4 +72,6 @@ class UserService extends ApiService {
   }
 }
 
-export default new UserService(); 
+// Assign instance to a variable before exporting
+const userService = new UserService();
+export { userService }; 
