@@ -66,7 +66,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Complete peer-to-peer roaming
 - [ ] CDR handling
 - [ ] Token management
-- [ ] Kafka integration for roaming events
+- [x] Kafka integration for roaming events
 
 ### 4. **User-Service** ✅
 - [x] Basic user management
@@ -74,7 +74,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] RFID token management
 - [ ] Wallet implementation
 - [ ] Charging history tracking
-- [ ] Kafka integration for user events
+- [x] Kafka integration for user events
 
 ### 5. **Smart-Charging-Service** ⚠️
 - [x] Basic service structure
@@ -185,7 +185,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
   - [x] Station-to-Billing: Charging session events
   - [x] Billing-to-Notification: Payment events
   - [x] Billing-to-Notification: Invoice events
-  - [ ] User-to-Notification: User activity events
+  - [x] User-to-Notification: User activity events
   - [ ] SmartCharging-to-Station: Load management commands
   - [ ] Station-to-SmartCharging: Telemetry events
 - [x] Implement error handling and retry mechanisms
@@ -230,9 +230,9 @@ ev-saas-platform/
 ## Next Steps
 1. Complete remaining UI components in admin-portal
 2. Extend Kafka event-driven architecture to remaining services:
-   - User service event producers and consumers
-   - Roaming service event integration
-   - Smart charging event-based control
+   - [x] User service event producers and consumers
+   - [ ] Roaming service event integration
+   - [ ] Smart charging event-based control
 3. Extend Redis caching to other services:
    - Implement Redis caching in station-service for status caching
    - Add Redis caching to user-service for profile data
@@ -259,3 +259,14 @@ Redis caching has been fully implemented in the API Gateway with the following f
 - [x] Cache invalidation mechanisms
 - [x] Health monitoring for Redis
 - [x] Route-specific cache configurations
+
+## Kafka Events Implementation ✅
+The platform now features a comprehensive event-driven architecture using Apache Kafka with the following components:
+- [x] User service events (user creation, updates, account status changes)
+- [x] Wallet events (deposits, withdrawals, payments)
+- [x] Notification service event consumers
+- [x] Email notifications triggered by events
+- [x] Billing service payment and invoice events
+- [x] Station service charging session events
+- [ ] Smart charging control events (pending)
+- [x] Roaming service events (locations, tokens, partners, CDRs)

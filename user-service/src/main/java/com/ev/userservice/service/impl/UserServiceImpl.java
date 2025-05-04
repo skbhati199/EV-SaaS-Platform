@@ -3,14 +3,18 @@ package com.ev.userservice.service.impl;
 import com.ev.userservice.dto.CreateUserRequest;
 import com.ev.userservice.dto.UpdateUserRequest;
 import com.ev.userservice.dto.UserDto;
+import com.ev.userservice.dto.event.UserEvent;
+import com.ev.userservice.dto.event.WalletEvent;
 import com.ev.userservice.model.Role;
 import com.ev.userservice.model.User;
 import com.ev.userservice.model.Wallet;
 import com.ev.userservice.repository.UserRepository;
 import com.ev.userservice.repository.WalletRepository;
+import com.ev.userservice.service.KafkaProducerService;
 import com.ev.userservice.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +27,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KafkaProducerService kafkaProducerService;
     
     @Override
     public List<UserDto> getAllUsers() {
@@ -95,7 +101,29 @@ public class UserServiceImpl implements UserService {
                 .currency("USD")
                 .build();
         
-        walletRepository.save(wallet);
+        Wallet savedWallet = walletRepository.save(wallet);
+        
+        // Publish user created event
+        try {
+            UserEvent userEvent = kafkaProducerService.createUserEvent(savedUser, UserEvent.UserEventType.CREATED);
+            kafkaProducerService.sendUserEvent(userEvent);
+            
+            // Publish wallet created event
+            WalletEvent walletEvent = WalletEvent.builder()
+                    .eventId(UUID.randomUUID())
+                    .userId(savedUser.getId())
+                    .walletId(savedWallet.getId())
+                    .eventType(WalletEvent.WalletEventType.CREATED)
+                    .timestamp(LocalDateTime.now())
+                    .newBalance(savedWallet.getBalance())
+                    .description("Wallet created for new user")
+                    .build();
+            
+            kafkaProducerService.sendWalletEvent(walletEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish user/wallet creation events", e);
+            // We don't want to fail the user creation if event publishing fails
+        }
         
         return mapToDto(savedUser);
     }
@@ -106,47 +134,75 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         
-        if (request.getFirstName() != null) {
+        boolean profileUpdated = false;
+        
+        if (request.getFirstName() != null && !request.getFirstName().equals(user.getFirstName())) {
             user.setFirstName(request.getFirstName());
+            profileUpdated = true;
         }
         
-        if (request.getLastName() != null) {
+        if (request.getLastName() != null && !request.getLastName().equals(user.getLastName())) {
             user.setLastName(request.getLastName());
+            profileUpdated = true;
         }
         
-        if (request.getPhoneNumber() != null) {
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(user.getPhoneNumber())) {
             user.setPhoneNumber(request.getPhoneNumber());
+            profileUpdated = true;
         }
         
-        if (request.getAddress() != null) {
+        if (request.getAddress() != null && !request.getAddress().equals(user.getAddress())) {
             user.setAddress(request.getAddress());
+            profileUpdated = true;
         }
         
-        if (request.getCity() != null) {
+        if (request.getCity() != null && !request.getCity().equals(user.getCity())) {
             user.setCity(request.getCity());
+            profileUpdated = true;
         }
         
-        if (request.getCountry() != null) {
+        if (request.getCountry() != null && !request.getCountry().equals(user.getCountry())) {
             user.setCountry(request.getCountry());
+            profileUpdated = true;
         }
         
-        if (request.getPostalCode() != null) {
+        if (request.getPostalCode() != null && !request.getPostalCode().equals(user.getPostalCode())) {
             user.setPostalCode(request.getPostalCode());
+            profileUpdated = true;
         }
         
         user.setUpdatedAt(LocalDateTime.now());
+        User updatedUser = userRepository.save(user);
         
-        return mapToDto(userRepository.save(user));
+        // Publish user updated event if profile was updated
+        if (profileUpdated) {
+            try {
+                UserEvent userEvent = kafkaProducerService.createUserEvent(
+                        updatedUser, UserEvent.UserEventType.PROFILE_UPDATED);
+                kafkaProducerService.sendUserEvent(userEvent);
+            } catch (Exception e) {
+                log.error("Failed to publish user update event", e);
+            }
+        }
+        
+        return mapToDto(updatedUser);
     }
 
     @Override
     @Transactional
     public void deleteUser(UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw new EntityNotFoundException("User not found with id: " + id);
-        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         
         userRepository.deleteById(id);
+        
+        // Publish user deleted event
+        try {
+            UserEvent userEvent = kafkaProducerService.createUserEvent(user, UserEvent.UserEventType.DELETED);
+            kafkaProducerService.sendUserEvent(userEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish user deletion event", e);
+        }
     }
 
     @Override
@@ -163,7 +219,18 @@ public class UserServiceImpl implements UserService {
         user.setEnabled(false);
         user.setUpdatedAt(LocalDateTime.now());
         
-        return mapToDto(userRepository.save(user));
+        User disabledUser = userRepository.save(user);
+        
+        // Publish user disabled event
+        try {
+            UserEvent userEvent = kafkaProducerService.createUserEvent(
+                    disabledUser, UserEvent.UserEventType.ACCOUNT_DISABLED);
+            kafkaProducerService.sendUserEvent(userEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish user disabled event", e);
+        }
+        
+        return mapToDto(disabledUser);
     }
 
     @Override
@@ -175,7 +242,18 @@ public class UserServiceImpl implements UserService {
         user.setEnabled(true);
         user.setUpdatedAt(LocalDateTime.now());
         
-        return mapToDto(userRepository.save(user));
+        User enabledUser = userRepository.save(user);
+        
+        // Publish user enabled event
+        try {
+            UserEvent userEvent = kafkaProducerService.createUserEvent(
+                    enabledUser, UserEvent.UserEventType.ACCOUNT_ENABLED);
+            kafkaProducerService.sendUserEvent(userEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish user enabled event", e);
+        }
+        
+        return mapToDto(enabledUser);
     }
     
     private UserDto mapToDto(User user) {

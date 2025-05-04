@@ -207,6 +207,42 @@ public class KafkaConsumerService {
     }
     
     /**
+     * Consume user events from user service
+     */
+    @KafkaListener(
+        topics = KafkaConfig.USER_EVENTS_TOPIC,
+        groupId = KafkaConfig.NOTIFICATION_CONSUMER_GROUP,
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    @Transactional
+    public void consumeUserEvent(UserEvent event, Acknowledgment acknowledgment) {
+        log.info("Received user event: type={}, userId={}", event.getEventType(), event.getUserId());
+        
+        try {
+            switch (event.getEventType()) {
+                case CREATED:
+                    handleUserCreatedEvent(event);
+                    break;
+                case PROFILE_UPDATED:
+                    handleUserProfileUpdatedEvent(event);
+                    break;
+                case ACCOUNT_DISABLED:
+                    handleUserAccountDisabledEvent(event);
+                    break;
+                case ACCOUNT_ENABLED:
+                    handleUserAccountEnabledEvent(event);
+                    break;
+            }
+            
+            acknowledgment.acknowledge();
+            log.debug("Acknowledged user event: {}", event.getEventId());
+        } catch (Exception e) {
+            log.error("Error processing user event: {}", event.getEventId(), e);
+            throw e;
+        }
+    }
+    
+    /**
      * Handle payment completed event
      */
     private void handlePaymentCompletedEvent(PaymentEvent event) {
@@ -520,6 +556,190 @@ public class KafkaConsumerService {
             log.info("Invoice overdue email sent to: {}", email);
         } catch (Exception e) {
             log.error("Error sending invoice overdue notification", e);
+        }
+    }
+    
+    /**
+     * Handle user created event
+     */
+    private void handleUserCreatedEvent(UserEvent event) {
+        log.info("Processing user created event for user: {}", event.getUserId());
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", event.getFirstName());
+        templateData.put("lastName", event.getLastName());
+        templateData.put("email", event.getEmail());
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(event.getUserId())
+                .channel("email")
+                .recipient(event.getEmail())
+                .subject("Welcome to EV SaaS Platform")
+                .templateId("welcome-email")
+                .templateData(templateData)
+                .priority(NotificationType.Priority.HIGH)
+                .createdAt(LocalDateTime.now())
+                .build();
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        notification.setNotificationType(NotificationType.USER_CREATED);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                event.getEmail(), 
+                "Welcome to EV SaaS Platform", 
+                null, 
+                "welcome-email", 
+                templateData);
+        
+        if (success) {
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            log.info("Welcome email sent to new user: {}", event.getEmail());
+        } else {
+            log.error("Failed to send welcome email to user: {}", event.getEmail());
+        }
+    }
+    
+    /**
+     * Handle user profile updated event
+     */
+    private void handleUserProfileUpdatedEvent(UserEvent event) {
+        log.info("Processing user profile updated event for user: {}", event.getUserId());
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", event.getFirstName());
+        templateData.put("lastName", event.getLastName());
+        templateData.put("email", event.getEmail());
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(event.getUserId())
+                .channel("email")
+                .recipient(event.getEmail())
+                .subject("Your Profile Has Been Updated")
+                .templateId("profile-updated")
+                .templateData(templateData)
+                .priority(NotificationType.Priority.MEDIUM)
+                .createdAt(LocalDateTime.now())
+                .build();
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        notification.setNotificationType(NotificationType.PROFILE_UPDATED);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                event.getEmail(), 
+                "Your Profile Has Been Updated", 
+                null, 
+                "profile-updated", 
+                templateData);
+        
+        if (success) {
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            log.info("Profile update notification sent to user: {}", event.getEmail());
+        } else {
+            log.error("Failed to send profile update notification to user: {}", event.getEmail());
+        }
+    }
+    
+    /**
+     * Handle user account disabled event
+     */
+    private void handleUserAccountDisabledEvent(UserEvent event) {
+        log.info("Processing user account disabled event for user: {}", event.getUserId());
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", event.getFirstName());
+        templateData.put("lastName", event.getLastName());
+        templateData.put("email", event.getEmail());
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(event.getUserId())
+                .channel("email")
+                .recipient(event.getEmail())
+                .subject("Your Account Has Been Disabled")
+                .templateId("account-disabled")
+                .templateData(templateData)
+                .priority(NotificationType.Priority.HIGH)
+                .createdAt(LocalDateTime.now())
+                .build();
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        notification.setNotificationType(NotificationType.ACCOUNT_DISABLED);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                event.getEmail(), 
+                "Your Account Has Been Disabled", 
+                null, 
+                "account-disabled", 
+                templateData);
+        
+        if (success) {
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            log.info("Account disabled notification sent to user: {}", event.getEmail());
+        } else {
+            log.error("Failed to send account disabled notification to user: {}", event.getEmail());
+        }
+    }
+    
+    /**
+     * Handle user account enabled event
+     */
+    private void handleUserAccountEnabledEvent(UserEvent event) {
+        log.info("Processing user account enabled event for user: {}", event.getUserId());
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", event.getFirstName());
+        templateData.put("lastName", event.getLastName());
+        templateData.put("email", event.getEmail());
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
+                .userId(event.getUserId())
+                .channel("email")
+                .recipient(event.getEmail())
+                .subject("Your Account Has Been Reactivated")
+                .templateId("account-enabled")
+                .templateData(templateData)
+                .priority(NotificationType.Priority.HIGH)
+                .createdAt(LocalDateTime.now())
+                .build();
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        notification.setNotificationType(NotificationType.ACCOUNT_ENABLED);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                event.getEmail(), 
+                "Your Account Has Been Reactivated", 
+                null, 
+                "account-enabled", 
+                templateData);
+        
+        if (success) {
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            log.info("Account enabled notification sent to user: {}", event.getEmail());
+        } else {
+            log.error("Failed to send account enabled notification to user: {}", event.getEmail());
         }
     }
     

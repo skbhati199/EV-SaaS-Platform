@@ -9,6 +9,12 @@ public enum NotificationType {
     USER_PASSWORD_RESET,
     USER_ACCOUNT_VERIFICATION,
     USER_PROFILE_UPDATE,
+    USER_CREATED,
+    USER_DELETED,
+    PROFILE_UPDATED,
+    ACCOUNT_DISABLED,
+    ACCOUNT_ENABLED,
+    ACCOUNT_LOCKED,
     
     // Charging related notifications
     CHARGING_STARTED,
@@ -33,6 +39,17 @@ public enum NotificationType {
     STATION_MAINTENANCE,
     STATION_AVAILABLE,
     
+    // Wallet related notifications
+    WALLET_CREATED,
+    WALLET_TOPPED_UP,
+    WALLET_PAYMENT_FAILED,
+    WALLET_LOW_BALANCE,
+    
+    // RFID token related notifications
+    RFID_TOKEN_CREATED,
+    RFID_TOKEN_ACTIVATED,
+    RFID_TOKEN_DEACTIVATED,
+    
     // Subscription related notifications
     SUBSCRIPTION_CREATED,
     SUBSCRIPTION_RENEWAL,
@@ -42,5 +59,15 @@ public enum NotificationType {
     // System notifications
     SYSTEM_MAINTENANCE,
     SYSTEM_OUTAGE,
-    SYSTEM_ANNOUNCEMENT
+    SYSTEM_ANNOUNCEMENT;
+    
+    /**
+     * Priority levels for notifications
+     */
+    public enum Priority {
+        LOW,
+        MEDIUM,
+        HIGH,
+        URGENT
+    }
 } 

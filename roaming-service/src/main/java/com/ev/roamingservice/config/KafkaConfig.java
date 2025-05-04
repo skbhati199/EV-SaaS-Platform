@@ -1,4 +1,4 @@
-package com.ev.notificationservice.config;
+package com.ev.roamingservice.config;
 
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -21,6 +21,10 @@ import org.springframework.util.backoff.FixedBackOff;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Kafka configuration for the Roaming service.
+ * Sets up producer, consumer, admin, and topic configurations.
+ */
 @Configuration
 @EnableKafka
 public class KafkaConfig {
@@ -31,21 +35,14 @@ public class KafkaConfig {
     @Value("${spring.application.name}")
     private String applicationName;
 
-    // Topic configurations for notification service
-    public static final String EMAIL_NOTIFICATIONS_TOPIC = "email-notifications";
-    public static final String SMS_NOTIFICATIONS_TOPIC = "sms-notifications";
-    public static final String PUSH_NOTIFICATIONS_TOPIC = "push-notifications";
+    // Topic configurations for roaming events
+    public static final String LOCATION_EVENTS_TOPIC = "location-events";
+    public static final String TOKEN_EVENTS_TOPIC = "token-events";
+    public static final String ROAMING_PARTNER_EVENTS_TOPIC = "roaming-partner-events";
+    public static final String CDR_EVENTS_TOPIC = "cdr-events";
     
-    // Topics from other services that notification service consumes
-    public static final String PAYMENT_EVENTS_TOPIC = "payment-events";
-    public static final String INVOICE_EVENTS_TOPIC = "invoice-events";
-    public static final String CHARGING_SESSION_TOPIC = "charging-session-events";
-    public static final String USER_EVENTS_TOPIC = "user-events";
-    public static final String WALLET_EVENTS_TOPIC = "wallet-events";
-    public static final String RFID_TOKEN_EVENTS_TOPIC = "rfid-token-events";
-    
-    // Consumer group for the notification service
-    public static final String NOTIFICATION_CONSUMER_GROUP = "notification-service-group";
+    // Consumer group for the roaming service
+    public static final String ROAMING_CONSUMER_GROUP = "roaming-service-group";
 
     // Producer configuration
     @Bean
@@ -75,26 +72,16 @@ public class KafkaConfig {
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, NOTIFICATION_CONSUMER_GROUP);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, ROAMING_CONSUMER_GROUP);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        
-        // Set consumer client ID
         props.put(ConsumerConfig.CLIENT_ID_CONFIG, applicationName + "-consumer");
         
-        // Increase fetch size to improve throughput
-        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024);
-        props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 500);
-        
-        // Trust packages from all services
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, 
-                "com.ev.notificationservice.dto," +
-                "com.ev.notificationservice.dto.event," +
-                "com.ev.station.dto.event," +
-                "com.ev.billingservice.dto.event," +
-                "com.ev.userservice.dto.event");
+        // Reliability configurations
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000); // 5 minutes
         
         return new DefaultKafkaConsumerFactory<>(props);
     }
@@ -104,20 +91,18 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = 
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-        
-        // Configure manual commits
+        factory.setConcurrency(3);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         
-        // Configure concurrency
-        factory.setConcurrency(3);
-        
-        // Configure error handling with retries
-        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3)));
+        // Configure error handling with retry
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+                new FixedBackOff(1000L, 3));
+        factory.setCommonErrorHandler(errorHandler);
         
         return factory;
     }
 
-    // Topic creation
+    // Topic creation with Kafka Admin
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
@@ -126,17 +111,22 @@ public class KafkaConfig {
     }
 
     @Bean
-    public NewTopic emailNotificationsTopic() {
-        return new NewTopic(EMAIL_NOTIFICATIONS_TOPIC, 3, (short) 1);
+    public NewTopic locationEventsTopic() {
+        return new NewTopic(LOCATION_EVENTS_TOPIC, 3, (short) 1);
     }
 
     @Bean
-    public NewTopic smsNotificationsTopic() {
-        return new NewTopic(SMS_NOTIFICATIONS_TOPIC, 3, (short) 1);
+    public NewTopic tokenEventsTopic() {
+        return new NewTopic(TOKEN_EVENTS_TOPIC, 3, (short) 1);
     }
 
     @Bean
-    public NewTopic pushNotificationsTopic() {
-        return new NewTopic(PUSH_NOTIFICATIONS_TOPIC, 3, (short) 1);
+    public NewTopic roamingPartnerEventsTopic() {
+        return new NewTopic(ROAMING_PARTNER_EVENTS_TOPIC, 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic cdrEventsTopic() {
+        return new NewTopic(CDR_EVENTS_TOPIC, 3, (short) 1);
     }
 } 
