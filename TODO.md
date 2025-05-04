@@ -9,12 +9,13 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - Grid integration features
 - Admin and user portals
 
+
 ---
 
 ## 📦 Tech Stack
 
 ### Backend (Microservices - Java) ✅
-- [x] Java 21 with Spring Boot 3
+- [x] Java 17 with Spring Boot 3
 - [x] Spring Cloud, Spring Security
 - [x] PostgreSQL + TimescaleDB
 - [x] Docker + Kubernetes setup
@@ -22,6 +23,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Redis (cache, queue, sessions)
 - [ ] Keycloak (SSO/OAuth2) integration
 - [ ] OCPP/OCPI protocol handling adapters completion
+- [ ] Swagger/OpenAPI for API documentation
+- [ ] Prometheus and Grafana for monitoring and observability
 
 ### Frontend
 - [x] Next.js 14 (App Router) setup
@@ -31,6 +34,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Real-time WebSocket clients
 - [ ] Comprehensive UI Components
 - [x] Integration with all backend services
+- [ ] Admin Portal Integration with Grafana
+
 
 ### Monitoring & Observability
 - [x] Grafana integration for dashboards
