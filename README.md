@@ -1,5 +1,7 @@
 # EV SaaS Platform
 
+domain: chargingev.app
+
 A comprehensive Electric Vehicle Charging Station Management Platform built with a microservices architecture using TurboRepo for monorepo management.
 
 ## Project Structure

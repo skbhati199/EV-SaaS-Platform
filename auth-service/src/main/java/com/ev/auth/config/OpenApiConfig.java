@@ -35,11 +35,11 @@ public class OpenApiConfig {
                         .contact(new Contact()
                                 .name("EV SaaS Platform Team")
                                 .email("support@evsaas.com")
-                                .url("https://www.evsaas.com/support"))
+                                .url("https://www.nbevc.com/support"))
                         .license(new License()
                                 .name("Private License")
-                                .url("https://www.evsaas.com/license"))
-                        .termsOfService("https://www.evsaas.com/terms"))
+                                .url("https://www.nbevc.com/license"))
+                        .termsOfService("https://www.nbevc.com/terms"))
                 .servers(Arrays.asList(
                         new Server().url("http://localhost:" + serverPort).description("Local Direct Access"),
                         new Server().url("http://localhost:8080/api/auth").description("Local API Gateway"),
@@ -54,12 +54,15 @@ public class OpenApiConfig {
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
     }
     
+    /**
+     * Make sure the group ID matches the one defined in API Gateway
+     */
     @Bean
     public GroupedOpenApi authServiceApi() {
         return GroupedOpenApi.builder()
                 .group("auth-service")
                 .packagesToScan("com.ev.auth.controller")
-                .pathsToMatch("/api/v1/**")
+                .pathsToMatch("/auth/**", "/oauth/**", "/api/v1/**")
                 .displayName("Auth Service API")
                 .build();
     }

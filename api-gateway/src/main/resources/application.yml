@@ -15,6 +15,56 @@ spring:
           filters:
             - RewritePath=/swagger-ui/(?<segment>.*), /webjars/swagger-ui/$\{segment}
         
+        # Service OpenAPI Documentation Routes
+        - id: auth-service-docs
+          uri: lb://auth-service
+          predicates:
+            - Path=/v3/api-docs/auth-service/**
+          filters:
+            - RewritePath=/v3/api-docs/auth-service/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: user-service-docs
+          uri: lb://user-service
+          predicates:
+            - Path=/v3/api-docs/user-service/**
+          filters:
+            - RewritePath=/v3/api-docs/user-service/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: station-service-docs
+          uri: lb://station-service
+          predicates:
+            - Path=/v3/api-docs/station-service/**
+          filters:
+            - RewritePath=/v3/api-docs/station-service/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: roaming-service-docs
+          uri: lb://roaming-service
+          predicates:
+            - Path=/v3/api-docs/roaming-service/**
+          filters:
+            - RewritePath=/v3/api-docs/roaming-service/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: billing-service-docs
+          uri: lb://billing-service
+          predicates:
+            - Path=/v3/api-docs/billing-service/**
+          filters:
+            - RewritePath=/v3/api-docs/billing-service/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: smart-charging-docs
+          uri: lb://smart-charging
+          predicates:
+            - Path=/v3/api-docs/smart-charging/**
+          filters:
+            - RewritePath=/v3/api-docs/smart-charging/(?<path>.*), /v3/api-docs/$\{path}
+
+        - id: notification-service-docs
+          uri: lb://notification-service
+          predicates:
+            - Path=/v3/api-docs/notification-service/**
+          filters:
+            - RewritePath=/v3/api-docs/notification-service/(?<path>.*), /v3/api-docs/$\{path}
+        
         # Auth Service Routes
         - id: auth-service
           uri: lb://auth-service
@@ -132,18 +182,52 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-    config-url: /v3/api-docs/swagger-config
-    use-root-path: true
+    disable-swagger-default-url: true
+    configUrl: /v3/api-docs/swagger-config
+    url: /v3/api-docs
+    urls:
+      - url: /v3/api-docs/api-gateway
+        name: API Gateway
+      - url: /v3/api-docs/auth-service
+        name: Auth Service
+      - url: /v3/api-docs/user-service
+        name: User Service
+      - url: /v3/api-docs/station-service
+        name: Station Service
+      - url: /v3/api-docs/roaming-service
+        name: Roaming Service
+      - url: /v3/api-docs/billing-service
+        name: Billing Service
+      - url: /v3/api-docs/smart-charging
+        name: Smart Charging Service
+      - url: /v3/api-docs/notification-service
+        name: Notification Service
+    urls-primary-name: EV SaaS Platform API
     display-request-duration: true
     operations-sorter: alpha
     tags-sorter: alpha
-    doc-expansion: none
-    disable-swagger-default-url: true
-    urls-primary-name: API Gateway
   cache:
     disabled: true
   default-produces-media-type: application/json
   default-consumes-media-type: application/json
+  # Add group info for API Gateway endpoints
+  group-configs:
+    - group: api-gateway
+      paths-to-match: /api-gateway/**
+    - group: auth-service
+      paths-to-match: /api/auth/**
+    - group: user-service
+      paths-to-match: /api/users/**
+    - group: station-service
+      paths-to-match: /api/stations/**
+    - group: roaming-service
+      paths-to-match: ['/api/roaming/**', '/ocpi/**']
+    - group: billing-service
+      paths-to-match: /api/billing/**
+    - group: smart-charging
+      paths-to-match: /api/smart-charging/**
+    - group: notification-service
+      paths-to-match: /api/notifications/**
 
 # Eureka Discovery Service Config
 eureka:

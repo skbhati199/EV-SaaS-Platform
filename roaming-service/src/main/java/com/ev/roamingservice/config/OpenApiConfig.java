@@ -34,11 +34,11 @@ public class OpenApiConfig {
                         .contact(new Contact()
                                 .name("EV SaaS Platform Team")
                                 .email("support@evsaas.com")
-                                .url("https://www.evsaas.com/support"))
+                                .url("https://www.nbevc.com/support"))
                         .license(new License()
                                 .name("Private License")
-                                .url("https://www.evsaas.com/license"))
-                        .termsOfService("https://www.evsaas.com/terms"))
+                                .url("https://www.nbevc.com/license"))
+                        .termsOfService("https://www.nbevc.com/terms"))
                 .servers(Arrays.asList(
                         new Server().url("http://localhost:" + serverPort).description("Local Development Server"),
                         new Server().url("https://api.evsaas.com").description("Production Server")))

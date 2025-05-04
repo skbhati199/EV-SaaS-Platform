@@ -35,11 +35,11 @@ public class OpenApiConfig {
         Contact contact = new Contact()
                 .name("EV SaaS Platform Team")
                 .email("support@evsaas.com")
-                .url("https://www.evsaas.com/support");
+                .url("https://www.nbevc.com/support");
 
         License license = new License()
                 .name("Private License")
-                .url("https://www.evsaas.com/license");
+                .url("https://www.nbevc.com/license");
 
         Info info = new Info()
                 .title("EV SaaS Platform API")
@@ -47,13 +47,109 @@ public class OpenApiConfig {
                 .version("1.0.0")
                 .contact(contact)
                 .license(license)
-                .termsOfService("https://www.evsaas.com/terms");
+                .termsOfService("https://www.nbevc.com/terms");
 
         return new OpenAPI()
                 .info(info)
                 .servers(List.of(localServer, productionServer));
     }
     
+    /**
+     * API Gateway specific endpoints
+     */
+    @Bean
+    public GroupedOpenApi apiGatewayGroup() {
+        return GroupedOpenApi.builder()
+                .group("api-gateway")
+                .pathsToMatch("/api-gateway/**")
+                .displayName("API Gateway")
+                .build();
+    }
+
+    /**
+     * Auth Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi authServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("auth-service")
+                .pathsToMatch("/api/auth/**")
+                .displayName("Auth Service")
+                .build();
+    }
+
+    /**
+     * User Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi userServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("user-service")
+                .pathsToMatch("/api/users/**")
+                .displayName("User Service")
+                .build();
+    }
+
+    /**
+     * Station Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi stationServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("station-service")
+                .pathsToMatch("/api/stations/**")
+                .displayName("Station Service")
+                .build();
+    }
+
+    /**
+     * Roaming Service endpoints (both internal and OCPI)
+     */
+    @Bean
+    public GroupedOpenApi roamingServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("roaming-service")
+                .pathsToMatch("/api/roaming/**", "/ocpi/**")
+                .displayName("Roaming Service")
+                .build();
+    }
+
+    /**
+     * Billing Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi billingServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("billing-service")
+                .pathsToMatch("/api/billing/**")
+                .displayName("Billing Service")
+                .build();
+    }
+
+    /**
+     * Smart Charging Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi smartChargingServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("smart-charging")
+                .pathsToMatch("/api/smart-charging/**")
+                .displayName("Smart Charging Service")
+                .build();
+    }
+
+    /**
+     * Notification Service endpoints
+     */
+    @Bean
+    public GroupedOpenApi notificationServiceGroup() {
+        return GroupedOpenApi.builder()
+                .group("notification-service")
+                .pathsToMatch("/api/notifications/**")
+                .displayName("Notification Service")
+                .build();
+    }
+
     /**
      * Default OpenAPI Group for all APIs
      */
