@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #2E7D32;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .payment-details {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .details-label {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .details-value {
+            flex: 2;
+            text-align: right;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #2E7D32;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Payment Confirmation</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello <span th:text="${userName}">User</span>,</p>
+
+        <p>We're pleased to confirm that your payment has been successfully processed.</p>
+
+        <div class="payment-details">
+            <h3>Payment Details:</h3>
+
+            <div class="details-row">
+                <span class="details-label">Invoice Number:</span>
+                <span class="details-value" th:text="${invoiceNumber}">INV-12345678</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Amount:</span>
+                <span class="details-value" th:text="${paymentCurrency} + ' ' + ${paymentAmount}">USD 25.00</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Payment Method:</span>
+                <span class="details-value" th:text="${paymentMethod}">Credit Card</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Date:</span>
+                <span class="details-value" th:text="${paymentDate}">2024-05-20 14:30</span>
+            </div>
+        </div>
+
+        <p>You can view your payment history and invoices in your account dashboard.</p>
+
+        <a href="http://dashboard.evsaas.com/billing" class="cta-button">View Billing History</a>
+
+        <p>Thank you for your payment!</p>
+
+        <p>Best regards,<br>The EV Charging Team</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>© 2024 EV SaaS Platform. All rights reserved.</p>
+    </div>
+</body>
+
+</html>

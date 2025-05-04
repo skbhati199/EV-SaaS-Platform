@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OVERDUE: Invoice Payment Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #D32F2F;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .invoice-details {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .overdue-notice {
+            background-color: #FFEBEE;
+            border-left: 4px solid #D32F2F;
+            padding: 15px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .details-label {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .details-value {
+            flex: 2;
+            text-align: right;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #D32F2F;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .due-date {
+            font-weight: bold;
+            color: #D32F2F;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>PAYMENT OVERDUE</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello <span th:text="${userName}">User</span>,</p>
+
+        <div class="overdue-notice">
+            <p>Your invoice <span th:text="${invoiceNumber}">INV-12345678</span> is now <span
+                    th:text="${daysPastDue}">10</span> days overdue.</p>
+        </div>
+
+        <p>Please make your payment as soon as possible to avoid any interruption to your charging services.</p>
+
+        <div class="invoice-details">
+            <h3>Invoice Details:</h3>
+
+            <div class="details-row">
+                <span class="details-label">Invoice Number:</span>
+                <span class="details-value" th:text="${invoiceNumber}">INV-12345678</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Amount Due:</span>
+                <span class="details-value" th:text="${invoiceCurrency} + ' ' + ${invoiceAmount}">USD 25.00</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Original Due Date:</span>
+                <span class="details-value due-date" th:text="${invoiceDueDate}">2024-05-20</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Days Overdue:</span>
+                <span class="details-value due-date" th:text="${daysPastDue}">10</span>
+            </div>
+        </div>
+
+        <a th:href="${invoiceUrl}" class="cta-button">Pay Now</a>
+
+        <p>If you have already made this payment, please disregard this message and accept our thanks.</p>
+
+        <p>If you're experiencing financial difficulties or need to discuss payment options, please contact our customer
+            support team as soon as possible.</p>
+
+        <p>Best regards,<br>The EV Charging Team</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>© 2024 EV SaaS Platform. All rights reserved.</p>
+    </div>
+</body>
+
+</html>
