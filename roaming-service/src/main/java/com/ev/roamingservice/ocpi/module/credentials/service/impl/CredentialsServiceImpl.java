@@ -2,12 +2,16 @@ package com.ev.roamingservice.ocpi.module.credentials.service.impl;
 
 import com.ev.roamingservice.model.OcpiConnectionStatus;
 import com.ev.roamingservice.model.OcpiParty;
+import com.ev.roamingservice.model.OcpiRole;
 import com.ev.roamingservice.model.OcpiToken;
 import com.ev.roamingservice.model.OcpiTokenType;
 import com.ev.roamingservice.ocpi.module.credentials.dto.Credentials;
+import com.ev.roamingservice.ocpi.module.credentials.dto.CredentialsRole;
 import com.ev.roamingservice.ocpi.module.credentials.service.CredentialsService;
 import com.ev.roamingservice.repository.OcpiPartyRepository;
 import com.ev.roamingservice.repository.OcpiTokenRepository;
+import com.ev.roamingservice.service.RoamingPartnerService;
+import com.ev.roamingservice.service.TokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Implementation of the credentials service
+ * Implementation of the credentials service using event-driven architecture
  */
 @Service
 public class CredentialsServiceImpl implements CredentialsService {
@@ -33,11 +37,19 @@ public class CredentialsServiceImpl implements CredentialsService {
 
     private final OcpiPartyRepository partyRepository;
     private final OcpiTokenRepository tokenRepository;
+    private final RoamingPartnerService roamingPartnerService;
+    private final TokenService tokenService;
 
     @Autowired
-    public CredentialsServiceImpl(OcpiPartyRepository partyRepository, OcpiTokenRepository tokenRepository) {
+    public CredentialsServiceImpl(
+            OcpiPartyRepository partyRepository, 
+            OcpiTokenRepository tokenRepository,
+            RoamingPartnerService roamingPartnerService,
+            TokenService tokenService) {
         this.partyRepository = partyRepository;
         this.tokenRepository = tokenRepository;
+        this.roamingPartnerService = roamingPartnerService;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -45,18 +57,31 @@ public class CredentialsServiceImpl implements CredentialsService {
     public void storeCredentials(Credentials credentials) {
         logger.debug("Storing credentials for party: {}", credentials.getPartyId());
 
-        // Create or update the party
-        OcpiParty party = findOrCreateParty(credentials);
+        // Create the party through the RoamingPartnerService to trigger events
+        String partyId = credentials.getPartyId();
+        String countryCode = credentials.getCountryCode();
+        String name = credentials.getBusinessDetails() != null ? 
+                credentials.getBusinessDetails().getName() : "Unknown Party";
         
-        // Create the token
-        OcpiToken token = new OcpiToken();
-        token.setParty(party);
-        token.setTokenType(OcpiTokenType.A);
-        token.setToken(credentials.getToken());
-        token.setValidUntil(LocalDateTime.now().plusMonths(3));
-        token.setRevoked(false);
+        // Determine the role from credentials
+        OcpiRole role = OcpiRole.OTHER;
+        if (!credentials.getRoles().isEmpty()) {
+            String roleStr = credentials.getRoles().get(0).getRole();
+            if (roleStr != null) {
+                try {
+                    role = OcpiRole.valueOf(roleStr);
+                } catch (IllegalArgumentException e) {
+                    logger.warn("Unknown role: {}, defaulting to OTHER", roleStr);
+                }
+            }
+        }
         
-        tokenRepository.save(token);
+        // Register the partner using the service which will trigger events
+        OcpiParty party = roamingPartnerService.registerPartner(
+                countryCode, partyId, name, role, credentials.getUrl());
+        
+        // Create the token using TokenService which will trigger events
+        tokenService.createToken(party, OcpiTokenType.A, 24 * 90); // 90 days
         
         logger.debug("Credentials stored for party: {}", credentials.getPartyId());
     }
@@ -88,14 +113,36 @@ public class CredentialsServiceImpl implements CredentialsService {
         // Update party details
         party.setPartyId(credentials.getPartyId());
         party.setCountryCode(credentials.getCountryCode());
-        // Update other fields as needed
         
-        // Update token
-        token.setToken(credentials.getToken());
-        token.setValidUntil(LocalDateTime.now().plusMonths(3));
+        // Update name if available
+        if (credentials.getBusinessDetails() != null && credentials.getBusinessDetails().getName() != null) {
+            party.setName(credentials.getBusinessDetails().getName());
+        }
         
-        partyRepository.save(party);
-        tokenRepository.save(token);
+        // Update URL if available
+        if (credentials.getUrl() != null) {
+            party.setVersionsUrl(credentials.getUrl());
+        }
+        
+        // Save party to update fields in database
+        party = partyRepository.save(party);
+        
+        // Create a new token using TokenService which will trigger events
+        if (credentials.getToken() != null && !credentials.getToken().isEmpty()) {
+            // First, revoke the old token
+            tokenService.revokeToken(token);
+            
+            // Then create a new token
+            token = tokenService.createToken(party, OcpiTokenType.C, 24 * 90); // 90 days
+        } else {
+            // Just refresh the existing token
+            token = tokenService.refreshToken(token, 24 * 90); // 90 days
+        }
+        
+        // If the party status is still pending, establish the connection
+        if (party.getStatus() == OcpiConnectionStatus.PENDING) {
+            roamingPartnerService.establishConnection(party);
+        }
         
         logger.debug("Credentials updated for party: {}", credentials.getPartyId());
     }
@@ -122,9 +169,16 @@ public class CredentialsServiceImpl implements CredentialsService {
         }
         
         OcpiToken token = tokenOpt.get();
+        OcpiParty party = token.getParty();
         
-        // Delete the token
-        tokenRepository.delete(token);
+        // First, revoke the token using TokenService
+        tokenService.revokeToken(token);
+        
+        // Then disconnect the party
+        roamingPartnerService.disconnectPartner(party);
+        
+        // Finally, delete the party
+        roamingPartnerService.deletePartner(party);
         
         logger.debug("Credentials deleted");
     }
@@ -133,38 +187,32 @@ public class CredentialsServiceImpl implements CredentialsService {
     public Credentials getCredentialsByToken(String token) {
         logger.debug("Getting credentials by token");
         
-        // Not implemented yet - would convert from OcpiToken to Credentials DTO
-        return null;
+        Optional<OcpiToken> tokenOpt = tokenRepository.findByToken(token);
+        
+        if (tokenOpt.isEmpty()) {
+            return null;
+        }
+        
+        OcpiToken ocpiToken = tokenOpt.get();
+        OcpiParty party = ocpiToken.getParty();
+        
+        if (party == null) {
+            return null;
+        }
+        
+        return mapPartyToCredentials(party, ocpiToken.getToken());
     }
 
     @Override
     public boolean validateToken(String token) {
         logger.debug("Validating token: {}", token);
         
-        // Find the token in the database
-        Optional<OcpiToken> tokenOpt = tokenRepository.findByToken(token);
-        
-        if (tokenOpt.isEmpty()) {
-            logger.error("Token not found in database: {}", token);
+        if (token == null || token.isEmpty()) {
             return false;
         }
         
-        OcpiToken ocpiToken = tokenOpt.get();
-        
-        // Check if the token is expired
-        if (ocpiToken.getValidUntil() != null && ocpiToken.getValidUntil().isBefore(LocalDateTime.now())) {
-            logger.error("Token expired: {}", token);
-            return false;
-        }
-        
-        // Check if the token is revoked
-        if (ocpiToken.isRevoked()) {
-            logger.error("Token revoked: {}", token);
-            return false;
-        }
-        
-        logger.debug("Token validated: {}", token);
-        return true;
+        // Use TokenService to validate the token
+        return tokenService.validateToken(token);
     }
 
     /**
@@ -172,52 +220,42 @@ public class CredentialsServiceImpl implements CredentialsService {
      * @return the token or null if not found
      */
     private String extractTokenFromHeader() {
-        ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        
-        if (requestAttributes == null) {
-            return null;
+        try {
+            ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (requestAttributes != null) {
+                HttpServletRequest request = requestAttributes.getRequest();
+                String authHeader = request.getHeader(TOKEN_HEADER);
+                
+                if (authHeader != null && authHeader.startsWith(TOKEN_PREFIX)) {
+                    return authHeader.substring(TOKEN_PREFIX.length());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error extracting token from header", e);
         }
         
-        HttpServletRequest request = requestAttributes.getRequest();
-        String authHeader = request.getHeader(TOKEN_HEADER);
-        
-        if (authHeader == null || !authHeader.startsWith(TOKEN_PREFIX)) {
-            return null;
-        }
-        
-        return authHeader.substring(TOKEN_PREFIX.length());
+        return null;
     }
 
     /**
-     * Find or create a party based on the credentials
-     * @param credentials the credentials
-     * @return the party
+     * Map from domain entity to DTO
+     * @param party the OcpiParty entity
+     * @param token the token to include
+     * @return a Credentials DTO
      */
-    private OcpiParty findOrCreateParty(Credentials credentials) {
-        Optional<OcpiParty> partyOpt = partyRepository.findByPartyIdAndCountryCode(
-                credentials.getPartyId(), credentials.getCountryCode());
+    private Credentials mapPartyToCredentials(OcpiParty party, String token) {
+        CredentialsRole role = CredentialsRole.builder()
+                .role(party.getRole().name())
+                .countryCode(party.getCountryCode())
+                .partyId(party.getPartyId())
+                .build();
         
-        OcpiParty party;
-        
-        if (partyOpt.isPresent()) {
-            party = partyOpt.get();
-        } else {
-            party = new OcpiParty();
-            party.setPartyId(credentials.getPartyId());
-            party.setCountryCode(credentials.getCountryCode());
-            party.setStatus(OcpiConnectionStatus.PENDING);
-        }
-        
-        // Set other fields as needed from credentials
-        
-        return partyRepository.save(party);
-    }
-
-    /**
-     * Generate a random token
-     * @return a UUID as a string
-     */
-    private String generateToken() {
-        return UUID.randomUUID().toString();
+        return Credentials.builder()
+                .token(token)
+                .url(party.getVersionsUrl())
+                .countryCode(party.getCountryCode())
+                .partyId(party.getPartyId())
+                .roles(java.util.Collections.singletonList(role))
+                .build();
     }
 } 

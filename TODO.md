@@ -64,8 +64,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Basic OCPI structure
 - [x] Location handling
 - [ ] Complete peer-to-peer roaming
-- [ ] CDR handling
-- [ ] Token management
+- [x] CDR handling
+- [x] Token management
 - [x] Kafka integration for roaming events
 
 ### 4. **User-Service** ✅
