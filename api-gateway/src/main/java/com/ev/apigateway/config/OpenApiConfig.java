@@ -8,8 +8,11 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springdoc.core.models.GroupedOpenApi;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,20 +24,43 @@ public class OpenApiConfig {
 
     @Value("${server.port:8080}")
     private String serverPort;
+    
+    private final Environment environment;
+    
+    public OpenApiConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public OpenAPI evSaasOpenAPI() {
-        Server localServer = new Server()
-                .url("http://localhost:" + serverPort)
-                .description("Local Development Server");
-
-        Server productionServer = new Server()
-                .url("https://api.nbevc.com")
-                .description("Production Server");
+        List<Server> servers = new ArrayList<>();
+        
+        // Check if Docker profile is active
+        boolean isDockerProfile = Arrays.asList(environment.getActiveProfiles()).contains("docker");
+        
+        if (isDockerProfile) {
+            // Docker environment servers
+            servers.add(new Server()
+                    .url("http://api-gateway:8080")
+                    .description("Docker API Gateway"));
+            
+            servers.add(new Server()
+                    .url("http://localhost:8080")
+                    .description("Local Docker Access"));
+        } else {
+            // Standard environment servers
+            servers.add(new Server()
+                    .url("http://localhost:" + serverPort)
+                    .description("Local Development Server"));
+                
+            servers.add(new Server()
+                    .url("https://api.evsaas.com")
+                    .description("Production Server"));
+        }
 
         Contact contact = new Contact()
                 .name("EV SaaS Platform Team")
-                .email("support@nbevc.com")
+                .email("support@evsaas.com")
                 .url("https://www.nbevc.com/support");
 
         License license = new License()
@@ -51,7 +77,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(info)
-                .servers(List.of(localServer, productionServer));
+                .servers(servers);
     }
     
     /**

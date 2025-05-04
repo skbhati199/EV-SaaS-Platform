@@ -17,49 +17,49 @@ spring:
         
         # Service OpenAPI Documentation Routes
         - id: auth-service-docs
-          uri: lb://auth-service
+          uri: ${DOCKER_URI:lb://auth-service}
           predicates:
             - Path=/v3/api-docs/auth-service/**
           filters:
             - RewritePath=/v3/api-docs/auth-service/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: user-service-docs
-          uri: lb://user-service
+          uri: ${DOCKER_URI:lb://user-service}
           predicates:
             - Path=/v3/api-docs/user-service/**
           filters:
             - RewritePath=/v3/api-docs/user-service/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: station-service-docs
-          uri: lb://station-service
+          uri: ${DOCKER_URI:lb://station-service}
           predicates:
             - Path=/v3/api-docs/station-service/**
           filters:
             - RewritePath=/v3/api-docs/station-service/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: roaming-service-docs
-          uri: lb://roaming-service
+          uri: ${DOCKER_URI:lb://roaming-service}
           predicates:
             - Path=/v3/api-docs/roaming-service/**
           filters:
             - RewritePath=/v3/api-docs/roaming-service/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: billing-service-docs
-          uri: lb://billing-service
+          uri: ${DOCKER_URI:lb://billing-service}
           predicates:
             - Path=/v3/api-docs/billing-service/**
           filters:
             - RewritePath=/v3/api-docs/billing-service/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: smart-charging-docs
-          uri: lb://smart-charging
+          uri: ${DOCKER_URI:lb://smart-charging}
           predicates:
             - Path=/v3/api-docs/smart-charging/**
           filters:
             - RewritePath=/v3/api-docs/smart-charging/(?<path>.*), /v3/api-docs/$\{path}
 
         - id: notification-service-docs
-          uri: lb://notification-service
+          uri: ${DOCKER_URI:lb://notification-service}
           predicates:
             - Path=/v3/api-docs/notification-service/**
           filters:

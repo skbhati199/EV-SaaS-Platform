@@ -141,4 +141,44 @@ management:
       show-details: always
   health:
     circuitbreakers:
-      enabled: true 
+      enabled: true
+
+# Docker profile configuration
+DOCKER_URI: http://auth-service:8081
+
+# Override Eureka configuration in Docker environment
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+# Disable security for development in Docker
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-service:8081/oauth2/jwks
+
+# OpenAPI customization for Docker
+springdoc:
+  swagger-ui:
+    urls:
+      - url: /v3/api-docs/api-gateway
+        name: API Gateway
+      - url: /v3/api-docs/auth-service
+        name: Auth Service
+      - url: /v3/api-docs/user-service
+        name: User Service
+      - url: /v3/api-docs/station-service
+        name: Station Service
+      - url: /v3/api-docs/roaming-service
+        name: Roaming Service
+      - url: /v3/api-docs/billing-service
+        name: Billing Service
+      - url: /v3/api-docs/smart-charging
+        name: Smart Charging Service
+      - url: /v3/api-docs/notification-service
+        name: Notification Service 
