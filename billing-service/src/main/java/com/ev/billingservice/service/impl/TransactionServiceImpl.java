@@ -154,13 +154,16 @@ public class TransactionServiceImpl implements TransactionService {
         // Calculate final amount
         if (transaction.getBillingPlanId() != null) {
             try {
+                // Get billing plan once
+                var billingPlan = billingPlanService.getBillingPlanById(transaction.getBillingPlanId());
+                
                 BigDecimal amount = calculateAmount(
                         transaction.getBillingPlanId(),
                         energyDeliveredKwh,
                         durationSeconds);
                 
                 transaction.setAmount(amount);
-                transaction.setCurrency("USD"); // TODO: Get from billing plan
+                transaction.setCurrency(billingPlan.getCurrency() != null ? billingPlan.getCurrency() : "USD");
             } catch (Exception e) {
                 log.error("Error calculating amount for transaction: {}", transaction.getId(), e);
             }

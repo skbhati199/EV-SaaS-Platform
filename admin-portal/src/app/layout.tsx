@@ -2,8 +2,10 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from './context/AuthContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeStyles } from '@/components/theme-styles';
+import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,7 +30,10 @@ export default function RootLayout({
         >
           <ThemeStyles />
           <AuthProvider>
-            {children}
+            <WebSocketProvider>
+              {children}
+              <Toaster />
+            </WebSocketProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

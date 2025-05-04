@@ -11,6 +11,7 @@ import { BarChart } from "@/components/dashboard/BarChart";
 import { PieChart } from "@/components/dashboard/PieChart";
 import { StationMap } from "@/components/dashboard/StationMap";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { RealTimeEventViewer } from "@/components/dashboard/RealTimeEventViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DashboardPage() {
@@ -100,7 +101,7 @@ export default function DashboardPage() {
             </Card>
           </div>
           
-          {/* System status */}
+          {/* System status and real-time events */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-2">
@@ -140,31 +141,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="h-18 flex flex-col items-center justify-center p-4 text-xs">
-                    <Zap className="h-8 w-8 mb-1 text-accent" />
-                    Manage Stations
-                  </Button>
-                  <Button variant="outline" className="h-18 flex flex-col items-center justify-center p-4 text-xs">
-                    <Users className="h-8 w-8 mb-1 text-accent" />
-                    View Users
-                  </Button>
-                  <Button variant="outline" className="h-18 flex flex-col items-center justify-center p-4 text-xs">
-                    <CreditCard className="h-8 w-8 mb-1 text-accent" />
-                    Billing Reports
-                  </Button>
-                  <Button variant="outline" className="h-18 flex flex-col items-center justify-center p-4 text-xs">
-                    <Activity className="h-8 w-8 mb-1 text-accent" />
-                    Analytics
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Real-time Events */}
+            <RealTimeEventViewer />
           </div>
           
           {/* Charts section */}
@@ -198,6 +176,20 @@ export default function DashboardPage() {
           </Card>
         </TabsContent>
         
+        <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>
+                System notifications and alerts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RealTimeEventViewer className="md:col-span-2" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
@@ -209,22 +201,6 @@ export default function DashboardPage() {
             <CardContent className="h-[400px] flex items-center justify-center border-t">
               <p className="text-muted-foreground">
                 Reports dashboard will be available in the next release
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                System notifications and alerts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px] flex items-center justify-center border-t">
-              <p className="text-muted-foreground">
-                Notifications dashboard will be available in the next release
               </p>
             </CardContent>
           </Card>

@@ -28,9 +28,9 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] TypeScript integration
 - [ ] Complete Admin Dashboard UI
 - [ ] User Portal Implementation
-- [ ] Real-time WebSocket clients
+- [x] Real-time WebSocket clients
 - [ ] Comprehensive UI Components
-- [ ] Integration with all backend services
+- [x] Integration with all backend services
 
 ### Monitoring & Observability
 - [x] Grafana integration for dashboards
@@ -58,6 +58,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Real-time status monitoring
 - [x] Transaction logging system
 - [x] Kafka integration for station events
+- [x] Session events Kafka producers
 
 ### 3. **Roaming-Service** ✅
 - [x] Basic OCPI structure
@@ -90,14 +91,18 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Invoice generation
 - [ ] Tax handling
 - [x] Kafka integration for payment events
+- [x] Kafka consumer for session events
+- [x] Kafka producer for payment/invoice events
 
 ### 7. **Notification-Service** ✅
 - [x] Basic notification structure
 - [x] Kafka configuration and basic implementation
-- [ ] Email notification implementation
+- [x] Email notification template implementation
 - [ ] SMS integration
 - [ ] Push notifications
 - [x] Consumer implementation for cross-service events
+- [x] Payment event notifications
+- [x] Invoice event notifications
 
 ### 8. **Admin-Portal** ⚠️
 - [x] Basic Next.js setup
@@ -106,7 +111,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Real-time monitoring
 - [ ] Report generation
 - [ ] Grafana dashboards integration
-- [ ] Real-time updates via WebSocket for Kafka events
+- [x] Real-time updates via WebSocket for Kafka events
 
 ---
 
@@ -188,6 +193,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Setup dead-letter queues for failed events
 - [ ] Implement event sourcing patterns where appropriate
 - [x] Add schema validation for events
+- [x] Create email templates for event notifications
+- [x] Add real-time update support via WebSockets for UI
 
 ---
 
@@ -201,6 +208,9 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 7. Create Grafana dashboards for all services
 8. Integrate Grafana with Admin Portal
 9. Continue Kafka event-driven architecture implementation across remaining services
+   - Implement User service events
+   - Implement SmartCharging service events
+10. Enhance WebSocket-based real-time event handling in Admin Portal
 
 ---
 
@@ -232,4 +242,4 @@ ev-saas-platform/
 9. Create and configure Prometheus and Grafana dashboards
 10. Integrate Grafana visualizations into Admin Portal UI
 11. Set up alerting for critical system metrics
-12. Add WebSocket support in Admin Portal for real-time Kafka events
+12. Enhance WebSocket support in Admin Portal with additional features

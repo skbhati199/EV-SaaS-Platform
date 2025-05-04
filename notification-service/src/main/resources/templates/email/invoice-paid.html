@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Paid - Receipt</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .invoice-details {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success-message {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .details-label {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .details-value {
+            flex: 2;
+            text-align: right;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Invoice Paid - Receipt</h1>
+    </div>
+
+    <div class="content">
+        <p>Hello <span th:text="${userName}">User</span>,</p>
+
+        <div class="success-message">
+            <p>Thank you for your payment. Your invoice has been paid in full.</p>
+        </div>
+
+        <div class="invoice-details">
+            <h3>Payment Receipt:</h3>
+
+            <div class="details-row">
+                <span class="details-label">Invoice Number:</span>
+                <span class="details-value" th:text="${invoiceNumber}">INV-12345678</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Amount Paid:</span>
+                <span class="details-value" th:text="${invoiceCurrency} + ' ' + ${invoiceAmount}">USD 25.00</span>
+            </div>
+
+            <div class="details-row">
+                <span class="details-label">Payment Date:</span>
+                <span class="details-value" th:text="${paymentDate}">2024-05-20 14:30</span>
+            </div>
+        </div>
+
+        <p>You can view your payment receipt and download a copy of your invoice from your account dashboard.</p>
+
+        <a th:href="${invoiceUrl}" class="cta-button">View Receipt</a>
+
+        <p>Thank you for choosing our charging services.</p>
+
+        <p>Best regards,<br>The EV Charging Team</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>© 2024 EV SaaS Platform. All rights reserved.</p>
+    </div>
+</body>
+
+</html>

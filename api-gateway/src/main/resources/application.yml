@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: api-gateway
+  # Add Kafka configuration
+  kafka:
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: api-gateway-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: com.ev.station.dto,com.ev.billingservice.dto
   cloud:
     gateway:
       routes:
