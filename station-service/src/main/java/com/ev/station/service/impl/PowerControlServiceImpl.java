@@ -8,14 +8,18 @@ import com.ev.station.ocpp.OcppWebSocketHandler;
 import com.ev.station.ocpp.request.SetChargingProfileRequest;
 import com.ev.station.ocpp.response.SetChargingProfileResponse;
 import com.ev.station.service.ChargingStationService;
+import com.ev.station.service.NotificationService;
 import com.ev.station.service.PowerControlService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +36,7 @@ public class PowerControlServiceImpl implements PowerControlService {
 
     private final ChargingStationService stationService;
     private final OcppWebSocketHandler ocppWebSocketHandler;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
     
     // Cache of active power control profiles to track and manage them
@@ -91,7 +96,21 @@ public class PowerControlServiceImpl implements PowerControlService {
                         profileId, stationId, connectorId, expiryTime);
             }
             
-            return result.join(); // Wait for the result
+            // Wait for the result and send notification
+            boolean success = result.join();
+            
+            // Send notification
+            notificationService.notifyPowerLimitSet(
+                    event.getStationId(),
+                    station.getName(),
+                    event.getConnectorId(),
+                    event.getPowerLimitKW(),
+                    event.getReason(),
+                    event.isTemporary(),
+                    event.getDurationSeconds(),
+                    success);
+                    
+            return success;
             
         } catch (Exception e) {
             log.error("Error processing power distribution event: {}", e.getMessage(), e);
@@ -113,6 +132,11 @@ public class PowerControlServiceImpl implements PowerControlService {
             // Build the charging profile
             SetChargingProfileRequest request = buildChargingProfileRequest(
                     connectorId, powerLimitW, durationSeconds, profileId);
+            
+            // Get the station for notification purposes
+            UUID stationUuid = UUID.fromString(stationId);
+            ChargingStation station = stationService.getStationByUUID(stationUuid);
+            String stationName = station != null ? station.getName() : stationId;
             
             // Send to station and return the future
             return sendOcppRequest(stationId, "SetChargingProfile", request)
@@ -168,6 +192,11 @@ public class PowerControlServiceImpl implements PowerControlService {
                 }
             }
             
+            // Get the station for notification purposes
+            UUID stationUuid = UUID.fromString(stationId);
+            ChargingStation station = stationService.getStationByUUID(stationUuid);
+            String stationName = station != null ? station.getName() : stationId;
+            
             // To clear a profile, we send a SetChargingProfile with no schedule periods
             SetChargingProfileRequest request = buildClearChargingProfileRequest(connectorId, profileId);
             
@@ -190,6 +219,13 @@ public class PowerControlServiceImpl implements PowerControlService {
                                 log.warn("Failed to clear power limit on station {} connector {}: {}", 
                                         stationId, connectorId, profileResponse.getStatus());
                             }
+                            
+                            // Send notification
+                            notificationService.notifyPowerLimitCleared(
+                                    stationUuid,
+                                    stationName,
+                                    connectorId == 0 ? null : connectorId,
+                                    success);
                             
                             return success;
                         } catch (Exception e) {
@@ -227,6 +263,92 @@ public class PowerControlServiceImpl implements PowerControlService {
         }
         
         return POWER_CONTROL_PROFILE_BASE_ID + priorityComponent + reasonComponent + uniqueComponent;
+    }
+    
+    /**
+     * Scheduled task that runs every minute to check for expired power profiles.
+     * If a profile has expired, it is cleared.
+     */
+    @Scheduled(fixedRate = 60000) // Run every minute
+    public void checkExpiredProfiles() {
+        log.debug("Checking for expired power profiles...");
+        
+        LocalDateTime now = LocalDateTime.now();
+        List<ProfileInfo> expiredProfiles = new ArrayList<>();
+        
+        // Find all expired profiles
+        for (Map.Entry<String, Map<Integer, Map<Integer, LocalDateTime>>> stationEntry : activeProfiles.entrySet()) {
+            String stationId = stationEntry.getKey();
+            
+            for (Map.Entry<Integer, Map<Integer, LocalDateTime>> connectorEntry : stationEntry.getValue().entrySet()) {
+                Integer connectorId = connectorEntry.getKey();
+                
+                for (Map.Entry<Integer, LocalDateTime> profileEntry : connectorEntry.getValue().entrySet()) {
+                    Integer profileId = profileEntry.getKey();
+                    LocalDateTime expiryTime = profileEntry.getValue();
+                    
+                    if (expiryTime.isBefore(now)) {
+                        // This profile has expired
+                        expiredProfiles.add(new ProfileInfo(stationId, connectorId, profileId));
+                    }
+                }
+            }
+        }
+        
+        // Clear expired profiles
+        for (ProfileInfo profile : expiredProfiles) {
+            log.info("Clearing expired power profile {} on station {} connector {}", 
+                    profile.profileId, profile.stationId, profile.connectorId);
+            
+            // Remove from active profiles map
+            Map<Integer, Map<Integer, LocalDateTime>> stationProfiles = activeProfiles.get(profile.stationId);
+            if (stationProfiles != null) {
+                Map<Integer, LocalDateTime> connectorProfiles = stationProfiles.get(profile.connectorId);
+                if (connectorProfiles != null) {
+                    connectorProfiles.remove(profile.profileId);
+                }
+            }
+            
+            // Get the station for notification purposes
+            UUID stationUuid = UUID.fromString(profile.stationId);
+            ChargingStation station = stationService.getStationByUUID(stationUuid);
+            String stationName = station != null ? station.getName() : profile.stationId;
+            
+            // Clear profile on station
+            clearConnectorPowerLimit(profile.stationId, profile.connectorId, profile.profileId)
+                    .thenAccept(success -> {
+                        if (success) {
+                            // Send notification about expiry
+                            notificationService.notifyPowerLimitExpired(
+                                    stationUuid,
+                                    stationName,
+                                    profile.connectorId == 0 ? null : profile.connectorId);
+                        }
+                    })
+                    .exceptionally(e -> {
+                        log.error("Error clearing expired profile: {}", e.getMessage(), e);
+                        return null;
+                    });
+        }
+        
+        if (!expiredProfiles.isEmpty()) {
+            log.info("Cleared {} expired power profiles", expiredProfiles.size());
+        }
+    }
+    
+    /**
+     * Helper class to store profile information for expiration handling
+     */
+    private static class ProfileInfo {
+        private final String stationId;
+        private final int connectorId;
+        private final int profileId;
+        
+        public ProfileInfo(String stationId, int connectorId, int profileId) {
+            this.stationId = stationId;
+            this.connectorId = connectorId;
+            this.profileId = profileId;
+        }
     }
     
     /**

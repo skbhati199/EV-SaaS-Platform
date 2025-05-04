@@ -336,7 +336,7 @@ The real-time charging power control feature is now being implemented with the f
 - [x] Implementation of PowerDistributionEvent producers to send control commands
 - [x] REST API endpoints for manual and emergency power control
 - [x] Integration with Station service to apply power limits
-- [ ] Real-time monitoring of power allocation through WebSocket for Admin UI
+- [x] Real-time monitoring of power allocation through WebSocket for Admin UI
 - [ ] Implementation of dynamic power adjustment algorithms based on:
   - [ ] Time-of-use pricing
   - [ ] Grid load constraints
@@ -354,7 +354,7 @@ The Kafka-based smart charging event flow has been implemented with the followin
 - [x] Group-wide power reduction for managing multiple stations simultaneously
 - [x] Consumer implementation in Station service
 - [x] OCPP SetChargingProfile implementation to apply power limits to stations via OCPP
-- [ ] WebSocket integration for real-time UI updates (pending)
+- [x] WebSocket integration for real-time UI updates
 - [ ] Telemetry event consumers for dynamic response to changing conditions (pending)
 
 ## Station Service Power Control Implementation
@@ -366,5 +366,5 @@ The station service now includes the following power control components:
 - [x] WebSocket handler updates to support bidirectional communication
 - [x] Dynamic charging profile creation based on smart charging commands
 - [x] Temporary vs. persistent power limit handling
-- [ ] Profile expiration management for temporary limits
-- [ ] WebSocket notification for Admin UI when power limits are applied
+- [x] Profile expiration management for temporary limits
+- [x] WebSocket notification for Admin UI when power limits are applied

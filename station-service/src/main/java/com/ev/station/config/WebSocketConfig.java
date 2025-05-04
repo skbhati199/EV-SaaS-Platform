@@ -1,36 +1,47 @@
 package com.ev.station.config;
 
 import com.ev.station.ocpp.OcppWebSocketHandler;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Bean;
+import com.ev.station.ocpp.StationHandshakeInterceptor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.server.HandshakeInterceptor;
-import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.*;
 
 @Configuration
+@EnableWebSocketMessageBroker
 @EnableWebSocket
-@RequiredArgsConstructor
-public class WebSocketConfig implements WebSocketConfigurer {
+public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBrokerConfigurer {
 
     private final OcppWebSocketHandler ocppWebSocketHandler;
-    private final HandshakeInterceptor stationHandshakeInterceptor;
+    private final StationHandshakeInterceptor handshakeInterceptor;
+
+    public WebSocketConfig(OcppWebSocketHandler ocppWebSocketHandler, StationHandshakeInterceptor handshakeInterceptor) {
+        this.ocppWebSocketHandler = ocppWebSocketHandler;
+        this.handshakeInterceptor = handshakeInterceptor;
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(ocppWebSocketHandler, "/ocpp/{stationId}/{ocppVersion}")
-                .addInterceptors(stationHandshakeInterceptor)
+        // Register the OCPP handler for charging stations
+        registry.addHandler(ocppWebSocketHandler, "/ws/ocpp/{stationId}")
+                .addInterceptors(handshakeInterceptor)
                 .setAllowedOrigins("*");
     }
+    
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // Enable a simple in-memory message broker for sending messages to clients
+        // These are the prefixes for messages SENT TO clients (outbound)
+        registry.enableSimpleBroker("/topic", "/queue");
+        
+        // This is the prefix for messages FROM clients (inbound)
+        registry.setApplicationDestinationPrefixes("/app");
+    }
 
-    @Bean
-    public ServletServerContainerFactoryBean createWebSocketContainer() {
-        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-        container.setMaxTextMessageBufferSize(8192);
-        container.setMaxBinaryMessageBufferSize(8192);
-        container.setMaxSessionIdleTimeout(60000L);
-        return container;
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Register a STOMP endpoint for the admin UI
+        registry.addEndpoint("/ws/admin")
+                .setAllowedOrigins("*")
+                .withSockJS();
     }
 } 
