@@ -52,9 +52,9 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 ### 1. **Auth-Service** ✅
 - [x] Basic authentication
 - [x] JWT implementation
-- [ ] Keycloak integration
-- [ ] 2FA implementation
-- [ ] Passwordless login
+- [x] Keycloak integration
+- [x] 2FA implementation
+- [x] Passwordless login
 
 ### 2. **Station-Service** ✅
 - [x] Basic EVSE management
