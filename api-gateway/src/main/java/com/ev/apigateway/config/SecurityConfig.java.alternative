@@ -2,6 +2,7 @@ package com.ev.apigateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -14,15 +15,14 @@ import java.util.List;
 
 /**
  * Security configuration for the API Gateway
+ * This is an alternative version that completely disables security for development
  */
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
     /**
-     * Security configuration for the API Gateway
-     * - Disables security features for development and easier Swagger access
-     * - Enables CORS
+     * Security configuration for the API Gateway that disables most security features for development
      */
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(corsSpec -> corsSpec.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
-                        // Allow all requests for development and Swagger access
+                        // Allow all requests for development
                         .anyExchange().permitAll()
                 )
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
@@ -44,7 +44,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // In production, restrict to specific origins
+        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization"));
         configuration.setMaxAge(3600L);

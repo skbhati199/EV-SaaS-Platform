@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springdoc.core.models.GroupedOpenApi;
 
 import java.util.List;
 
@@ -51,5 +52,17 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(info)
                 .servers(List.of(localServer, productionServer));
+    }
+    
+    /**
+     * Default OpenAPI Group for all APIs
+     */
+    @Bean
+    public GroupedOpenApi allApisGroup() {
+        return GroupedOpenApi.builder()
+                .group("all-apis")
+                .pathsToMatch("/**")
+                .displayName("All APIs")
+                .build();
     }
 } 

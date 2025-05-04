@@ -22,6 +22,10 @@ spring:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: auth-service
+                fallbackUri: forward:/api-gateway/service-fallback/auth
         
         # User Service Routes
         - id: user-service
@@ -30,6 +34,10 @@ spring:
             - Path=/api/users/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: user-service
+                fallbackUri: forward:/api-gateway/service-fallback/users
         
         # Station Service Routes
         - id: station-service
@@ -38,6 +46,10 @@ spring:
             - Path=/api/stations/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: station-service
+                fallbackUri: forward:/api-gateway/service-fallback/stations
         
         # Roaming Service OCPI Routes (exposed externally)
         - id: roaming-service-ocpi
@@ -45,15 +57,10 @@ spring:
           predicates:
             - Path=/ocpi/**
           filters:
-            - OcpiAuthorizationFilter
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
             - name: CircuitBreaker
               args:
                 name: roaming-service
-                fallbackUri: forward:/fallback/ocpi
+                fallbackUri: forward:/api-gateway/service-fallback/ocpi
         
         # Roaming Service Internal Routes
         - id: roaming-service-internal
@@ -62,6 +69,10 @@ spring:
             - Path=/api/roaming/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: roaming-service
+                fallbackUri: forward:/api-gateway/service-fallback/roaming
         
         # Billing Service Routes
         - id: billing-service
@@ -70,6 +81,10 @@ spring:
             - Path=/api/billing/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: billing-service
+                fallbackUri: forward:/api-gateway/service-fallback/billing
         
         # Smart Charging Service Routes
         - id: smart-charging
@@ -78,6 +93,10 @@ spring:
             - Path=/api/smart-charging/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: smart-charging
+                fallbackUri: forward:/api-gateway/service-fallback/smart-charging
         
         # Notification Service Routes
         - id: notification-service
@@ -86,8 +105,17 @@ spring:
             - Path=/api/notifications/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: notification-service
+                fallbackUri: forward:/api-gateway/service-fallback/notifications
 
-  # Security config
+      # Set default filters for all routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
+        - AddResponseHeader=Access-Control-Allow-Origin, *
+
+  # Security config - temporarily disabled for development
   security:
     oauth2:
       resourceserver:
@@ -99,27 +127,19 @@ springdoc:
   api-docs:
     enabled: true
     path: /v3/api-docs
+    groups:
+      enabled: true
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
     config-url: /v3/api-docs/swagger-config
-    urls:
-      - url: /v3/api-docs
-        name: API Gateway
-      - url: /api/auth/v3/api-docs
-        name: Auth Service
-      - url: /api/users/v3/api-docs
-        name: User Service
-      - url: /api/stations/v3/api-docs
-        name: Station Service
-      - url: /api/roaming/v3/api-docs
-        name: Roaming Service
-      - url: /api/billing/v3/api-docs
-        name: Billing Service
-      - url: /api/smart-charging/v3/api-docs
-        name: Smart Charging Service
-      - url: /api/notifications/v3/api-docs
-        name: Notification Service
+    use-root-path: true
+    display-request-duration: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+    doc-expansion: none
+    disable-swagger-default-url: true
+    urls-primary-name: API Gateway
   cache:
     disabled: true
   default-produces-media-type: application/json
@@ -130,31 +150,39 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
+    registry-fetch-interval-seconds: 5
   instance:
     preferIpAddress: true
+    lease-renewal-interval-in-seconds: 10
 
 # Resilience4j Circuit Breaker Config
 resilience4j:
   circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
     instances:
       auth-service:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        permittedNumberOfCallsInHalfOpenState: 3
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-        waitDurationInOpenState: 5s
-        failureRateThreshold: 50
-        eventConsumerBufferSize: 10
+        baseConfig: default
+      user-service:
+        baseConfig: default
+      station-service:
+        baseConfig: default
       roaming-service:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        permittedNumberOfCallsInHalfOpenState: 3
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-        waitDurationInOpenState: 5s
-        failureRateThreshold: 50
-        eventConsumerBufferSize: 10
+        baseConfig: default
+      billing-service:
+        baseConfig: default
+      smart-charging:
+        baseConfig: default
+      notification-service:
+        baseConfig: default
 
 # Timeout config
 spring.cloud.gateway.httpclient:
@@ -166,7 +194,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,gateway
+        include: "*"
   endpoint:
     health:
       show-details: always
