@@ -3,10 +3,13 @@ import {
   stationService, 
   Station, 
   Connector,
-  StationCreateData,
-  StationUpdateData,
-  StationFilterParams 
+  StationFilter
 } from '@/app/services';
+
+// Define these types locally since they're not exported from the service
+type StationCreateData = Partial<Station>;
+type StationUpdateData = Partial<Station>;
+type StationFilterParams = StationFilter;
 
 type StationsState = {
   stations: Station[];
@@ -39,11 +42,15 @@ export const useStationsStore = create<StationsState>((set, get) => ({
   fetchStations: async (page = 0, size = 10, filters) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await stationService.getStations(page, size, filters);
+      const response = await stationService.getStations({
+        page,
+        limit: size,
+        ...filters
+      });
       
       set({ 
-        stations: response.content, 
-        totalCount: response.totalElements,
+        stations: response.stations, 
+        totalCount: response.total,
         currentPage: page,
         pageSize: size,
         isLoading: false 

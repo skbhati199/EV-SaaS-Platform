@@ -61,12 +61,8 @@ export default function RegisterPage() {
         lastName: formData.lastName,
       });
       
-      // Update global auth store with user info
-      login({ 
-        email: response.user.email,
-        name: `${response.user.firstName} ${response.user.lastName}`,
-        role: response.user.role 
-      });
+      // Update auth context with user info
+      login(response.user);
       
       // Redirect based on role
       redirectBasedOnRole(response.user.role);

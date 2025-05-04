@@ -28,7 +28,15 @@ export default function LoginPage() {
       if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
         const success = await authService.mockLogin(email, password);
         if (success) {
-          login({ email, name: 'Admin User', role: 'ADMIN' });
+          login({ 
+            id: 'mock-id',
+            email: email,
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'ADMIN',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
           router.push('/dashboard');
           return;
         } else {
@@ -40,11 +48,7 @@ export default function LoginPage() {
       const response = await authService.login({ email, password });
       
       // Update auth context/store with user info
-      login({ 
-        email: response.user.email,
-        name: `${response.user.firstName} ${response.user.lastName}`,
-        role: response.user.role 
-      });
+      login(response.user);
       
       // Redirect based on user role
       redirectBasedOnRole(response.user.role);

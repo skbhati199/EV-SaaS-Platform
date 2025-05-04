@@ -86,6 +86,31 @@ class StationService extends ApiService {
     return this.post<any>(`/${id}/commands`, { command, params });
   }
   
+  // Reboot a station
+  async rebootStation(id: string): Promise<boolean> {
+    return this.sendCommand(id, 'Reboot');
+  }
+  
+  // Update station firmware
+  async updateFirmware(id: string, firmwareVersion: string): Promise<boolean> {
+    return this.sendCommand(id, 'UpdateFirmware', { firmwareVersion });
+  }
+  
+  // Reset a connector
+  async resetConnector(stationId: string, connectorId: string): Promise<boolean> {
+    return this.sendCommand(stationId, 'ResetConnector', { connectorId });
+  }
+  
+  // Enable a connector
+  async enableConnector(stationId: string, connectorId: string): Promise<boolean> {
+    return this.sendCommand(stationId, 'EnableConnector', { connectorId });
+  }
+  
+  // Disable a connector
+  async disableConnector(stationId: string, connectorId: string): Promise<boolean> {
+    return this.sendCommand(stationId, 'DisableConnector', { connectorId });
+  }
+
   // Get station statistics (counts by status, etc.)
   async getStationStats(): Promise<any> {
     return this.get<any>('/stats');

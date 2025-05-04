@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { authService, UserProfile } from '@/app/services';
+import { authService, User } from '@/app/services';
 
 type AuthState = {
-  user: UserProfile | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (user: UserProfile) => void;
+  login: (user: User) => void;
   logout: () => Promise<void>;
   clearError: () => void;
   checkAuth: () => Promise<void>;
@@ -18,7 +18,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  login: (user: UserProfile) => {
+  login: (user: User) => {
     set({ 
       user, 
       isAuthenticated: true, 
