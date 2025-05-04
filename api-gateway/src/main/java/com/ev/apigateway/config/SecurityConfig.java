@@ -30,6 +30,9 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(corsSpec -> corsSpec.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
+                        // Explicitly allow Swagger UI and API docs endpoints
+                        .pathMatchers("/v3/api-docs/**", "/swagger-ui/**", "/webjars/swagger-ui/**", 
+                                     "/api/auth-swagger/**", "/api/*/v3/api-docs/**").permitAll()
                         // Allow all requests for development and Swagger access
                         .anyExchange().permitAll()
                 )

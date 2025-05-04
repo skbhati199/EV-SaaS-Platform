@@ -87,6 +87,18 @@ spring:
                 name: auth-service
                 fallbackUri: forward:/api-gateway/service-fallback/auth
         
+        # Auth Service Swagger UI direct access
+        - id: auth-service-swagger
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth-swagger/**
+          filters:
+            - RewritePath=/api/auth-swagger(?<segment>/?.*), $\{segment}
+            - name: CircuitBreaker
+              args:
+                name: auth-service
+                fallbackUri: forward:/api-gateway/service-fallback/auth
+        
         # User Service Routes
         - id: user-service
           uri: lb://user-service
