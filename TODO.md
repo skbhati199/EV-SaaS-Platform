@@ -83,6 +83,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Smart grid interface
 - [ ] V2G support
 - [ ] Kafka integration for load management events
+- [ ] Real-time charging power control
 
 ### 6. **Billing-Service** ✅
 - [x] Basic billing structure
@@ -188,6 +189,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
   - [x] User-to-Notification: User activity events
   - [ ] SmartCharging-to-Station: Load management commands
   - [ ] Station-to-SmartCharging: Telemetry events
+  - [x] Station-to-Roaming: Charging session events for CDR generation
+  - [x] Roaming-to-Notification: Partner connection events
 - [x] Implement error handling and retry mechanisms
 - [x] Add event tracking and monitoring
 - [x] Setup dead-letter queues for failed events
@@ -196,21 +199,73 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Create email templates for event notifications
 - [x] Add real-time update support via WebSockets for UI
 
----
+## OCPI Protocol Implementation Progress
+- [x] Basic OCPI infrastructure setup
+- [x] Credentials module implementation with token management
+- [x] Locations module with event integration
+- [x] CDR generation from charging sessions
+- [ ] Tokens module for EV driver authorization (50% complete)
+- [ ] Sessions module (pending)
+- [ ] Tariffs module (pending)
+- [ ] Commands module (pending)
+- [x] Event-driven architecture for OCPI modules
 
 ## Current Focus Areas (Priority Tasks)
 1. Complete OCPP implementation
 2. Finish Admin Portal UI
-3. Implement payment integration
-4. Set up monitoring and logging
+3. Implement Smart Charging Kafka integration:
+   - Create event schema and DTOs
+   - Implement event producers for load management
+   - Implement event consumers for station telemetry
+   - Connect to Station service for control commands
+4. Implement payment integration with external providers
 5. Complete user portal development
-6. Implement comprehensive testing
+6. Implement comprehensive testing suite
 7. Create Grafana dashboards for all services
 8. Integrate Grafana with Admin Portal
-9. Continue Kafka event-driven architecture implementation across remaining services
-   - Implement User service events
-   - Implement SmartCharging service events
-10. Enhance WebSocket-based real-time event handling in Admin Portal
+9. Continue Kafka event-driven architecture implementation:
+   - [x] User service events (complete)
+   - [x] Roaming service events (complete)
+   - [ ] SmartCharging service events (pending)
+10. Complete OCPI protocol implementation
+11. Enhance WebSocket-based real-time event handling in Admin Portal
+
+## Smart Charging Implementation Plan
+The next focus area is implementing the Smart Charging service with Kafka integration:
+
+1. **Event Schema Design**
+   - Define LoadManagementEvent schema
+   - Define ChargingProfileEvent schema
+   - Define GridStatusEvent schema
+
+2. **Event Producers**
+   - Create KafkaProducerService for Smart Charging
+   - Implement load management command production
+   - Implement charging profile update events
+
+3. **Event Consumers**
+   - Implement telemetry data consumers from stations
+   - Implement power availability events from grid
+   - Setup processing logic for dynamic load adjustment
+
+4. **Smart Charging Algorithms**
+   - Implement fair allocation algorithm
+   - Implement peak shaving capability
+   - Implement grid-responsive charging
+
+5. **Station Service Integration**
+   - Integrate with Station service via Kafka for bidirectional communication
+   - Implement command pattern for control operations
+   - Create WebSocket-based monitoring for admin UI
+
+## Kafka Events Implementation - Next Steps
+After successfully implementing Kafka events for User service and Roaming service, the next steps are:
+
+- Implement Smart Charging event producers and consumers
+- Complete WebSocket integration for real-time monitoring
+- Add event archiving for long-term analytics
+- Implement additional testing and monitoring for Kafka health
+- Create admin tools for event debugging and replay
 
 ---
 
@@ -231,7 +286,7 @@ ev-saas-platform/
 1. Complete remaining UI components in admin-portal
 2. Extend Kafka event-driven architecture to remaining services:
    - [x] User service event producers and consumers
-   - [ ] Roaming service event integration
+   - [x] Roaming service event integration
    - [ ] Smart charging event-based control
 3. Extend Redis caching to other services:
    - Implement Redis caching in station-service for status caching
@@ -270,3 +325,5 @@ The platform now features a comprehensive event-driven architecture using Apache
 - [x] Station service charging session events
 - [ ] Smart charging control events (pending)
 - [x] Roaming service events (locations, tokens, partners, CDRs)
+- [x] Acknowledgment-based message processing with retry logic
+- [x] Event-driven OCPI implementation for roaming features
