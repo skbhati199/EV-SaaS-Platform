@@ -84,14 +84,14 @@ spring:
     host: redis
     port: 6379
   
-  # Security config
+  # Security config for Docker environment
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: http://auth-service:8081/oauth2/jwks
 
-# Eureka Discovery Service Config
+# Eureka Discovery Service Config for Docker
 eureka:
   client:
     serviceUrl:
@@ -101,6 +101,7 @@ eureka:
   instance:
     prefer-ip-address: true
     hostname: api-gateway
+    preferIpAddress: true
 
 # Resilience4j Circuit Breaker Config
 resilience4j:
@@ -145,22 +146,6 @@ management:
 
 # Docker profile configuration
 DOCKER_URI: http://auth-service:8081
-
-# Override Eureka configuration in Docker environment
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://eureka-server:8761/eureka/
-  instance:
-    preferIpAddress: true
-
-# Disable security for development in Docker
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://auth-service:8081/oauth2/jwks
 
 # OpenAPI customization for Docker
 springdoc:
