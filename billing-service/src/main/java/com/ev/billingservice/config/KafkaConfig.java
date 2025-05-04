@@ -1,17 +1,21 @@
 package com.ev.billingservice.config;
 
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
@@ -30,10 +34,15 @@ public class KafkaConfig {
     // Topic definitions - these match the topics in the station-service
     public static final String CHARGING_SESSION_TOPIC = "charging-session-events";
     public static final String STATION_STATUS_TOPIC = "station-status-events";
+    
+    // Billing service topics as producer
+    public static final String PAYMENT_EVENTS_TOPIC = "payment-events";
+    public static final String INVOICE_EVENTS_TOPIC = "invoice-events";
 
     // Consumer group for the billing service
     public static final String BILLING_CONSUMER_GROUP = "billing-service-group";
 
+    // Consumer configuration
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -73,5 +82,46 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3)));
         
         return factory;
+    }
+    
+    // Producer configuration
+    @Bean
+    public ProducerFactory<String, Object> producerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        configProps.put(ProducerConfig.CLIENT_ID_CONFIG, applicationName + "-producer");
+        
+        // Add reliability configurations
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all"); // Highest reliability
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);  // Retry on errors
+        configProps.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 1000); // Retry delay
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true); // Prevent duplicates
+        
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+    
+    // Admin client and topic creation
+    @Bean
+    public KafkaAdmin kafkaAdmin() {
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        return new KafkaAdmin(configs);
+    }
+    
+    @Bean
+    public NewTopic paymentEventsTopic() {
+        return new NewTopic(PAYMENT_EVENTS_TOPIC, 3, (short) 1);
+    }
+    
+    @Bean
+    public NewTopic invoiceEventsTopic() {
+        return new NewTopic(INVOICE_EVENTS_TOPIC, 3, (short) 1);
     }
 } 

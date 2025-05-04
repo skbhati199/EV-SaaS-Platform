@@ -1,6 +1,7 @@
 package com.ev.billingservice.service.impl;
 
 import com.ev.billingservice.dto.event.ChargingSessionEvent;
+import com.ev.billingservice.dto.event.InvoiceEvent;
 import com.ev.billingservice.model.ChargingTransaction;
 import com.ev.billingservice.model.TransactionStatus;
 import com.ev.billingservice.repository.ChargingTransactionRepository;
@@ -8,6 +9,7 @@ import com.ev.billingservice.service.BillingPlanService;
 import com.ev.billingservice.service.InvoiceService;
 import com.ev.billingservice.service.SubscriptionService;
 import com.ev.billingservice.service.TransactionService;
+import com.ev.billingservice.service.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.UUID;
 
 @Service
@@ -26,6 +29,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final BillingPlanService billingPlanService;
     private final SubscriptionService subscriptionService;
     private final InvoiceService invoiceService;
+    private final KafkaProducerService kafkaProducerService;
 
     @Override
     @Transactional
@@ -213,6 +217,37 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
         
         // Generate invoice - this would call the invoice service
-        return invoiceService.generateInvoiceForTransaction(transaction.getId());
+        UUID invoiceId = invoiceService.generateInvoiceForTransaction(transaction.getId());
+        
+        // Get invoice details
+        var invoice = invoiceService.getInvoiceById(invoiceId);
+        
+        // Send invoice event
+        try {
+            InvoiceEvent event = InvoiceEvent.builder()
+                .eventId(UUID.randomUUID())
+                .invoiceId(invoiceId)
+                .userId(transaction.getUserId())
+                .eventType("CREATED")
+                .invoiceNumber(invoice.getInvoiceNumber())
+                .totalAmount(invoice.getTotalAmount())
+                .currency(invoice.getCurrency())
+                .status(invoice.getStatus())
+                .issuedAt(invoice.getIssuedAt())
+                .dueAt(invoice.getDueAt())
+                .chargingSessionIds(Collections.singletonList(transaction.getSessionId()))
+                .transactionIds(Collections.singletonList(transaction.getId()))
+                .timestamp(LocalDateTime.now())
+                .invoiceUrl("/api/v1/billing/invoices/" + invoiceId) // Sample URL
+                .build();
+            
+            kafkaProducerService.sendInvoiceEvent(event);
+            log.debug("Sent invoice event for invoice: {}", invoiceId);
+        } catch (Exception e) {
+            log.error("Failed to send invoice event for invoice {}: {}", invoiceId, e.getMessage(), e);
+            // Don't throw - we still want to return the invoice ID even if the event sending fails
+        }
+        
+        return invoiceId;
     }
 } 

@@ -2,14 +2,22 @@ package com.ev.notificationservice.service;
 
 import com.ev.notificationservice.config.KafkaConfig;
 import com.ev.notificationservice.dto.NotificationEvent;
+import com.ev.notificationservice.dto.event.InvoiceEvent;
+import com.ev.notificationservice.dto.event.PaymentEvent;
 import com.ev.notificationservice.model.Notification;
+import com.ev.notificationservice.model.NotificationType;
 import com.ev.notificationservice.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -21,12 +29,13 @@ public class KafkaConsumerService {
     private final EmailService emailService;
     private final SmsService smsService;
     private final PushNotificationService pushNotificationService;
+    private final UserService userService;
 
     /**
      * Consume email notification events
      */
     @KafkaListener(topics = "#{kafkaConfig.EMAIL_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumeEmailNotification(NotificationEvent event) {
+    public void consumeEmailNotification(NotificationEvent event, Acknowledgment acknowledgment) {
         log.info("Received email notification event: {}", event);
         
         try {
@@ -52,8 +61,11 @@ public class KafkaConsumerService {
             } else {
                 log.error("Failed to send email notification");
             }
+            
+            acknowledgment.acknowledge();
         } catch (Exception e) {
             log.error("Error processing email notification", e);
+            throw e;
         }
     }
     
@@ -61,7 +73,7 @@ public class KafkaConsumerService {
      * Consume SMS notification events
      */
     @KafkaListener(topics = "#{kafkaConfig.SMS_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumeSmsNotification(NotificationEvent event) {
+    public void consumeSmsNotification(NotificationEvent event, Acknowledgment acknowledgment) {
         log.info("Received SMS notification event");
         
         try {
@@ -84,8 +96,11 @@ public class KafkaConsumerService {
             } else {
                 log.error("Failed to send SMS notification");
             }
+            
+            acknowledgment.acknowledge();
         } catch (Exception e) {
             log.error("Error processing SMS notification", e);
+            throw e;
         }
     }
     
@@ -93,7 +108,7 @@ public class KafkaConsumerService {
      * Consume push notification events
      */
     @KafkaListener(topics = "#{kafkaConfig.PUSH_NOTIFICATIONS_TOPIC}", groupId = "${spring.kafka.consumer.group-id:notification-service}")
-    public void consumePushNotification(NotificationEvent event) {
+    public void consumePushNotification(NotificationEvent event, Acknowledgment acknowledgment) {
         log.info("Received push notification event");
         
         try {
@@ -117,8 +132,394 @@ public class KafkaConsumerService {
             } else {
                 log.error("Failed to send push notification");
             }
+            
+            acknowledgment.acknowledge();
         } catch (Exception e) {
             log.error("Error processing push notification", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Consume payment events from billing service
+     */
+    @KafkaListener(
+        topics = KafkaConfig.PAYMENT_EVENTS_TOPIC,
+        groupId = KafkaConfig.NOTIFICATION_CONSUMER_GROUP,
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    @Transactional
+    public void consumePaymentEvent(PaymentEvent event, Acknowledgment acknowledgment) {
+        log.info("Received payment event: type={}, paymentId={}", event.getEventType(), event.getPaymentId());
+        
+        try {
+            switch (event.getEventType()) {
+                case "COMPLETED":
+                    handlePaymentCompletedEvent(event);
+                    break;
+                case "FAILED":
+                    handlePaymentFailedEvent(event);
+                    break;
+                case "REFUNDED":
+                    handlePaymentRefundedEvent(event);
+                    break;
+            }
+            
+            acknowledgment.acknowledge();
+            log.debug("Acknowledged payment event: {}", event.getEventId());
+        } catch (Exception e) {
+            log.error("Error processing payment event: {}", event.getEventId(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Consume invoice events from billing service
+     */
+    @KafkaListener(
+        topics = KafkaConfig.INVOICE_EVENTS_TOPIC,
+        groupId = KafkaConfig.NOTIFICATION_CONSUMER_GROUP,
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    @Transactional
+    public void consumeInvoiceEvent(InvoiceEvent event, Acknowledgment acknowledgment) {
+        log.info("Received invoice event: type={}, invoiceId={}", event.getEventType(), event.getInvoiceId());
+        
+        try {
+            switch (event.getEventType()) {
+                case "CREATED":
+                    handleInvoiceCreatedEvent(event);
+                    break;
+                case "PAID":
+                    handleInvoicePaidEvent(event);
+                    break;
+                case "OVERDUE":
+                    handleInvoiceOverdueEvent(event);
+                    break;
+            }
+            
+            acknowledgment.acknowledge();
+            log.debug("Acknowledged invoice event: {}", event.getEventId());
+        } catch (Exception e) {
+            log.error("Error processing invoice event: {}", event.getEventId(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Handle payment completed event
+     */
+    private void handlePaymentCompletedEvent(PaymentEvent event) {
+        log.info("Handling payment completed event for payment: {}", event.getPaymentId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("paymentAmount", event.getAmount().toString());
+            templateData.put("paymentCurrency", event.getCurrency());
+            templateData.put("paymentMethod", event.getPaymentMethod());
+            templateData.put("paymentDate", event.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            templateData.put("invoiceNumber", "INV-" + event.getInvoiceId().toString().substring(0, 8).toUpperCase());
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.PAYMENT_RECEIVED.name())
+                .subject("Payment Confirmation")
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("payment-confirmation-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getPaymentId().toString())
+                .relatedEntityType("PAYMENT")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Payment confirmation email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending payment confirmation notification", e);
+        }
+    }
+    
+    /**
+     * Handle payment failed event
+     */
+    private void handlePaymentFailedEvent(PaymentEvent event) {
+        log.info("Handling payment failed event for payment: {}", event.getPaymentId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("paymentAmount", event.getAmount().toString());
+            templateData.put("paymentCurrency", event.getCurrency());
+            templateData.put("paymentMethod", event.getPaymentMethod());
+            templateData.put("errorMessage", event.getErrorMessage());
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.PAYMENT_FAILED.name())
+                .subject("Payment Failed")
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("payment-failed-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getPaymentId().toString())
+                .relatedEntityType("PAYMENT")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Payment failed email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending payment failed notification", e);
+        }
+    }
+    
+    /**
+     * Handle payment refunded event
+     */
+    private void handlePaymentRefundedEvent(PaymentEvent event) {
+        log.info("Handling payment refunded event for payment: {}", event.getPaymentId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("refundAmount", event.getAmount().toString());
+            templateData.put("refundCurrency", event.getCurrency());
+            templateData.put("refundDate", event.getUpdatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.PAYMENT_REFUNDED.name())
+                .subject("Payment Refunded")
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("payment-refunded-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getPaymentId().toString())
+                .relatedEntityType("PAYMENT")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Payment refund email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending payment refund notification", e);
+        }
+    }
+    
+    /**
+     * Handle invoice created event
+     */
+    private void handleInvoiceCreatedEvent(InvoiceEvent event) {
+        log.info("Handling invoice created event for invoice: {}", event.getInvoiceId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("invoiceNumber", event.getInvoiceNumber());
+            templateData.put("invoiceAmount", event.getTotalAmount().toString());
+            templateData.put("invoiceCurrency", event.getCurrency());
+            templateData.put("invoiceDate", event.getIssuedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            templateData.put("invoiceDueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            templateData.put("invoiceUrl", event.getInvoiceUrl());
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.INVOICE_CREATED.name())
+                .subject("New Invoice Available: " + event.getInvoiceNumber())
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("invoice-created-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getInvoiceId().toString())
+                .relatedEntityType("INVOICE")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Invoice created email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending invoice created notification", e);
+        }
+    }
+    
+    /**
+     * Handle invoice paid event
+     */
+    private void handleInvoicePaidEvent(InvoiceEvent event) {
+        log.info("Handling invoice paid event for invoice: {}", event.getInvoiceId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("invoiceNumber", event.getInvoiceNumber());
+            templateData.put("invoiceAmount", event.getTotalAmount().toString());
+            templateData.put("invoiceCurrency", event.getCurrency());
+            templateData.put("paymentDate", event.getPaidAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            templateData.put("invoiceUrl", event.getInvoiceUrl());
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.INVOICE_PAID.name())
+                .subject("Invoice Paid: " + event.getInvoiceNumber())
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("invoice-paid-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getInvoiceId().toString())
+                .relatedEntityType("INVOICE")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Invoice paid email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending invoice paid notification", e);
+        }
+    }
+    
+    /**
+     * Handle invoice overdue event
+     */
+    private void handleInvoiceOverdueEvent(InvoiceEvent event) {
+        log.info("Handling invoice overdue event for invoice: {}", event.getInvoiceId());
+        
+        try {
+            // Get user contact information
+            var user = userService.getUserById(event.getUserId());
+            String email = user.getEmail();
+            
+            // Create email template data
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
+            templateData.put("invoiceNumber", event.getInvoiceNumber());
+            templateData.put("invoiceAmount", event.getTotalAmount().toString());
+            templateData.put("invoiceCurrency", event.getCurrency());
+            templateData.put("invoiceDueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            templateData.put("daysPastDue", LocalDateTime.now().toLocalDate().toEpochDay() - event.getDueAt().toLocalDate().toEpochDay());
+            templateData.put("invoiceUrl", event.getInvoiceUrl());
+            
+            // Send email notification
+            NotificationEvent emailEvent = NotificationEvent.builder()
+                .userId(event.getUserId())
+                .type(NotificationType.INVOICE_OVERDUE.name())
+                .subject("OVERDUE: Invoice " + event.getInvoiceNumber())
+                .recipient(email)
+                .channel("EMAIL")
+                .templateId("invoice-overdue-template")
+                .templateData(templateData)
+                .relatedEntityId(event.getInvoiceId().toString())
+                .relatedEntityType("INVOICE")
+                .build();
+            
+            emailService.sendEmail(
+                email, 
+                emailEvent.getSubject(), 
+                null, 
+                emailEvent.getTemplateId(), 
+                emailEvent.getTemplateData()
+            );
+            
+            // Save notification record
+            Notification notification = createNotificationFromEvent(emailEvent);
+            notification.setSent(true);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+            
+            log.info("Invoice overdue email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Error sending invoice overdue notification", e);
         }
     }
     

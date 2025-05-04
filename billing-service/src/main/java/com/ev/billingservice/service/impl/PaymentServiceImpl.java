@@ -1,6 +1,7 @@
 package com.ev.billingservice.service.impl;
 
 import com.ev.billingservice.dto.PaymentDTO;
+import com.ev.billingservice.dto.event.PaymentEvent;
 import com.ev.billingservice.exception.BadRequestException;
 import com.ev.billingservice.exception.ResourceNotFoundException;
 import com.ev.billingservice.model.Invoice;
@@ -9,6 +10,7 @@ import com.ev.billingservice.model.Payment;
 import com.ev.billingservice.model.Payment.PaymentStatus;
 import com.ev.billingservice.repository.InvoiceRepository;
 import com.ev.billingservice.repository.PaymentRepository;
+import com.ev.billingservice.service.KafkaProducerService;
 import com.ev.billingservice.service.NotificationService;
 import com.ev.billingservice.service.PaymentService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final InvoiceRepository invoiceRepository;
     private final NotificationService notificationService;
+    private final KafkaProducerService kafkaProducerService;
     
     @Override
     @Transactional
@@ -42,12 +45,18 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setUserId(invoice.getUserId());
         payment = paymentRepository.save(payment);
         
+        // Send payment created event
+        sendPaymentEvent(payment, "CREATED");
+        
         // Update invoice status if payment is successful
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
             updateInvoiceStatus(invoice, payment.getAmount(), payment.getPaymentDate());
             
             // Send notification for successful payment
             notificationService.sendPaymentReceivedNotification(payment);
+            
+            // Send payment completed event
+            sendPaymentEvent(payment, "COMPLETED");
         }
         
         return mapToDTO(payment);
@@ -105,6 +114,8 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Invoice ID cannot be changed");
         }
         
+        PaymentStatus oldStatus = existingPayment.getStatus();
+        
         // Update fields
         existingPayment.setAmount(paymentDTO.getAmount());
         existingPayment.setPaymentMethod(paymentDTO.getPaymentMethod());
@@ -114,8 +125,11 @@ public class PaymentServiceImpl implements PaymentService {
         
         final Payment savedPayment = paymentRepository.save(existingPayment);
         
+        // Send payment updated event
+        sendPaymentEvent(savedPayment, "UPDATED");
+        
         // If payment status changed to COMPLETED, update invoice and send notification
-        if (paymentDTO.getStatus() == PaymentStatus.COMPLETED && 
+        if (oldStatus != PaymentStatus.COMPLETED && 
                 savedPayment.getStatus() == PaymentStatus.COMPLETED) {
             
             final UUID invoiceId = savedPayment.getInvoiceId();
@@ -126,6 +140,9 @@ public class PaymentServiceImpl implements PaymentService {
             
             // Send notification for successful payment
             notificationService.sendPaymentReceivedNotification(savedPayment);
+            
+            // Send payment completed event
+            sendPaymentEvent(savedPayment, "COMPLETED");
         }
         
         return mapToDTO(savedPayment);
@@ -136,6 +153,21 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentDTO processPayment(PaymentDTO paymentDTO) {
         // This method would typically integrate with a payment processor
         // For demonstration, we're assuming the payment is successful
+        
+        // Send payment processing event
+        PaymentEvent processingEvent = createPaymentEvent(
+            null,
+            paymentDTO.getInvoiceId(), 
+            null, // user ID will be set when creating payment
+            "PROCESSING",
+            paymentDTO.getAmount(), 
+            "USD", 
+            paymentDTO.getPaymentMethod(),
+            null,
+            "PROCESSING",
+            null
+        );
+        kafkaProducerService.sendPaymentEvent(processingEvent);
         
         paymentDTO.setStatus(PaymentStatus.COMPLETED);
         paymentDTO.setTransactionId(UUID.randomUUID().toString());
@@ -154,6 +186,9 @@ public class PaymentServiceImpl implements PaymentService {
         
         payment.setStatus(PaymentStatus.REFUNDED);
         final Payment savedPayment = paymentRepository.save(payment);
+        
+        // Send payment refunded event
+        sendPaymentEvent(savedPayment, "REFUNDED");
         
         // Update invoice status
         final UUID invoiceId = savedPayment.getInvoiceId();
@@ -208,5 +243,65 @@ public class PaymentServiceImpl implements PaymentService {
                 .status(payment.getStatus())
                 .paymentDate(payment.getPaymentDate())
                 .build();
+    }
+    
+    /**
+     * Send a payment event to Kafka
+     */
+    private void sendPaymentEvent(Payment payment, String eventType) {
+        try {
+            PaymentEvent event = createPaymentEvent(
+                payment.getId(),
+                payment.getInvoiceId(),
+                payment.getUserId(),
+                eventType,
+                payment.getAmount(),
+                "USD",
+                payment.getPaymentMethod(),
+                payment.getTransactionId(),
+                payment.getStatus().name(),
+                null
+            );
+            
+            kafkaProducerService.sendPaymentEvent(event);
+            log.debug("Sent payment event of type {} for payment: {}", eventType, payment.getId());
+        } catch (Exception e) {
+            log.error("Failed to send payment event for payment {}: {}", payment.getId(), e.getMessage(), e);
+            // Don't throw - we don't want to fail the transaction just because the event couldn't be sent
+        }
+    }
+    
+    /**
+     * Create a payment event
+     */
+    private PaymentEvent createPaymentEvent(
+            UUID paymentId,
+            UUID invoiceId,
+            UUID userId,
+            String eventType,
+            java.math.BigDecimal amount,
+            String currency,
+            String paymentMethod,
+            String transactionId,
+            String status,
+            String errorMessage) {
+            
+        return PaymentEvent.builder()
+            .eventId(UUID.randomUUID())
+            .paymentId(paymentId)
+            .userId(userId)
+            .invoiceId(invoiceId)
+            .eventType(eventType)
+            .amount(amount)
+            .currency(currency)
+            .paymentMethod(paymentMethod)
+            .paymentMethodDetails(paymentMethod) // This could be more specific in a real implementation
+            .status(status)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .timestamp(LocalDateTime.now())
+            .transactionId(transactionId)
+            .errorMessage(errorMessage)
+            .build();
     }
 } 
