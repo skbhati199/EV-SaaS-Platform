@@ -18,7 +18,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Spring Cloud, Spring Security
 - [x] PostgreSQL + TimescaleDB
 - [x] Docker + Kubernetes setup
-- [ ] Kafka or RabbitMQ integration for event-driven services
+- [ ] Kafka integration for event-driven services
 - [ ] Redis (cache, queue, sessions)
 - [ ] Keycloak (SSO/OAuth2) integration
 - [ ] OCPP/OCPI protocol handling adapters completion
@@ -57,6 +57,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Complete OCPP server implementation
 - [ ] Real-time status monitoring
 - [ ] Transaction logging system
+- [ ] Kafka integration for station events
 
 ### 3. **Roaming-Service** ✅
 - [x] Basic OCPI structure
@@ -64,6 +65,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Complete peer-to-peer roaming
 - [ ] CDR handling
 - [ ] Token management
+- [ ] Kafka integration for roaming events
 
 ### 4. **User-Service** ✅
 - [x] Basic user management
@@ -71,6 +73,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] RFID token management
 - [ ] Wallet implementation
 - [ ] Charging history tracking
+- [ ] Kafka integration for user events
 
 ### 5. **Smart-Charging-Service** ⚠️
 - [x] Basic service structure
@@ -78,6 +81,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Dynamic pricing system
 - [ ] Smart grid interface
 - [ ] V2G support
+- [ ] Kafka integration for load management events
 
 ### 6. **Billing-Service** ✅
 - [x] Basic billing structure
@@ -85,13 +89,15 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Payment gateway integration
 - [ ] Invoice generation
 - [ ] Tax handling
+- [ ] Kafka integration for payment events
 
 ### 7. **Notification-Service** ✅
 - [x] Basic notification structure
+- [x] Kafka configuration and basic implementation
 - [ ] Email notification implementation
 - [ ] SMS integration
 - [ ] Push notifications
-- [ ] Event handling with Kafka
+- [ ] Consumer implementation for cross-service events
 
 ### 8. **Admin-Portal** ⚠️
 - [x] Basic Next.js setup
@@ -100,6 +106,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Real-time monitoring
 - [ ] Report generation
 - [ ] Grafana dashboards integration
+- [ ] Real-time updates via WebSocket for Kafka events
 
 ---
 
@@ -164,6 +171,25 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 
 ---
 
+## 🔄 Kafka Event-Driven Architecture Implementation
+- [x] Kafka and Zookeeper infrastructure setup
+- [x] Notification service Kafka configuration and topics
+- [x] Basic producer and consumer in Notification service
+- [ ] Define system-wide event schema and standards
+- [ ] Implement cross-service event communication:
+  - [ ] Station-to-Billing: Charging session events
+  - [ ] Billing-to-Notification: Payment events
+  - [ ] User-to-Notification: User activity events
+  - [ ] SmartCharging-to-Station: Load management commands
+  - [ ] Station-to-SmartCharging: Telemetry events
+- [ ] Implement error handling and retry mechanisms
+- [ ] Add event tracking and monitoring
+- [ ] Setup dead-letter queues for failed events
+- [ ] Implement event sourcing patterns where appropriate
+- [ ] Add schema validation for events
+
+---
+
 ## Current Focus Areas (Priority Tasks)
 1. Complete OCPP implementation
 2. Finish Admin Portal UI
@@ -173,6 +199,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 6. Implement comprehensive testing
 7. Create Grafana dashboards for all services
 8. Integrate Grafana with Admin Portal
+9. Complete Kafka event-driven architecture implementation
 
 ---
 
@@ -201,4 +228,6 @@ ev-saas-platform/
 9. Create and configure Prometheus and Grafana dashboards
 10. Integrate Grafana visualizations into Admin Portal UI
 11. Set up alerting for critical system metrics
-
+12. Implement Kafka event producers in Station, Billing, and User services
+13. Define standard event schema across all services
+14. Add Kafka consumers in appropriate services for cross-service communication
