@@ -53,3 +53,8 @@ build/
 Thumbs.db
 .DS_Store
 .turbo/daemon/e095abefbcf3edc7-turbo.log.2025-04-29
+
+
+/.trae/
+.cursorignore
+/.cursor/
