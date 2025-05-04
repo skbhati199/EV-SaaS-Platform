@@ -430,8 +430,10 @@ services:
       - KC_DB_URL=jdbc:postgresql://postgres:5432/evsaas_db
       - KC_DB_USERNAME=evsaas
       - KC_DB_PASSWORD=evsaas_password
-      - KC_HOSTNAME=keycloak
-      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=8090
+      - KC_HOSTNAME_ADMIN_URL=http://localhost:8090
+      - KC_HOSTNAME_URL=http://localhost:8090
       - KC_HTTP_ENABLED=true
       - KC_PROXY=edge
     command: start-dev --import-realm
