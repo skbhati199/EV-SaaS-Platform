@@ -368,3 +368,38 @@ The station service now includes the following power control components:
 - [x] Temporary vs. persistent power limit handling
 - [x] Profile expiration management for temporary limits
 - [x] WebSocket notification for Admin UI when power limits are applied
+
+## Admin UI Integration for Power Control
+The next step is to integrate real-time power control monitoring in the Admin Portal:
+- [ ] Subscribe to WebSocket power control notifications in Admin Portal
+- [ ] Create a real-time power control dashboard component
+- [ ] Display active power limits with visual indicators for:
+  - [ ] Current power limits on stations and connectors
+  - [ ] Temporary vs. persistent limits with expiration timers
+  - [ ] Different limit types (emergency, scheduled, load balancing)
+- [ ] Provide manual control interface for operators to:
+  - [ ] Set new power limits on stations or connectors
+  - [ ] Clear existing power limits
+  - [ ] Enable emergency power reduction
+- [ ] Implement graphical visualization of power usage across stations
+- [ ] Add alerts for power-related issues
+- [ ] Create historical view of power control events
+
+## Next Steps for Smart Charging Feature
+1. Implement telemetry event consumers for dynamic response to changing conditions:
+   - [ ] Create TelemetryEvent DTO in Station service for reporting metrics
+   - [ ] Implement telemetry event producer in Station service
+   - [ ] Create consumer in Smart Charging service to process telemetry
+   - [ ] Develop dynamic adjustment algorithms using real-time data
+   
+2. Enhance testing framework for power control:
+   - [ ] Create integration tests for SmartChargingService
+   - [ ] Implement simulator for OCPP stations to test power limits
+   - [ ] Add load testing for high-volume event processing
+   - [ ] Create a test dashboard for monitoring power control functionality
+   
+3. Add safety mechanisms to prevent circuit overloading:
+   - [ ] Implement circuit breaker pattern for power limits
+   - [ ] Add max amperage constraints based on physical infrastructure
+   - [ ] Create automatic failsafe mechanism for dangerous conditions
+   - [ ] Implement multi-level approvals for high-risk power changes
