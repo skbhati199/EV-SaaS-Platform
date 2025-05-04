@@ -83,7 +83,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] Smart grid interface
 - [ ] V2G support
 - [ ] Kafka integration for load management events
-- [ ] Real-time charging power control
+- [x] Real-time charging power control (in progress)
 
 ### 6. **Billing-Service** ✅
 - [x] Basic billing structure
@@ -327,3 +327,44 @@ The platform now features a comprehensive event-driven architecture using Apache
 - [x] Roaming service events (locations, tokens, partners, CDRs)
 - [x] Acknowledgment-based message processing with retry logic
 - [x] Event-driven OCPI implementation for roaming features
+
+## Real-time Charging Power Control Implementation
+The real-time charging power control feature is now being implemented with the following components:
+- [x] Basic architecture design with PowerProfileService and SmartChargingService interfaces
+- [x] Kafka configuration for power distribution events and charging profile events
+- [x] Session power adjustment API in SmartChargingService
+- [x] Implementation of PowerDistributionEvent producers to send control commands
+- [x] REST API endpoints for manual and emergency power control
+- [x] Integration with Station service to apply power limits
+- [ ] Real-time monitoring of power allocation through WebSocket for Admin UI
+- [ ] Implementation of dynamic power adjustment algorithms based on:
+  - [ ] Time-of-use pricing
+  - [ ] Grid load constraints
+  - [ ] User preferences and priority levels
+  - [ ] Vehicle charging capabilities
+- [ ] Testing framework for power control commands
+- [ ] Safety mechanisms to prevent overloading circuits
+
+## Smart Charging Event Flow Implementation
+The Kafka-based smart charging event flow has been implemented with the following components:
+- [x] PowerDistributionEvent DTO for standardized event structure
+- [x] KafkaProducerService interface and implementation for sending control events
+- [x] Integration with SmartChargingService for automatic power adjustment during session changes
+- [x] Emergency power reduction capabilities for quick response to grid or site issues
+- [x] Group-wide power reduction for managing multiple stations simultaneously
+- [x] Consumer implementation in Station service
+- [x] OCPP SetChargingProfile implementation to apply power limits to stations via OCPP
+- [ ] WebSocket integration for real-time UI updates (pending)
+- [ ] Telemetry event consumers for dynamic response to changing conditions (pending)
+
+## Station Service Power Control Implementation
+The station service now includes the following power control components:
+- [x] Kafka consumer configuration to receive power distribution events
+- [x] PowerDistributionEvent consumer implementation
+- [x] PowerControlService for processing power commands
+- [x] OCPP SetChargingProfile request and response implementation
+- [x] WebSocket handler updates to support bidirectional communication
+- [x] Dynamic charging profile creation based on smart charging commands
+- [x] Temporary vs. persistent power limit handling
+- [ ] Profile expiration management for temporary limits
+- [ ] WebSocket notification for Admin UI when power limits are applied

@@ -1,11 +1,13 @@
 package com.ev.smartcharging.service.impl;
 
 import com.ev.smartcharging.dto.ChargingStationDto;
+import com.ev.smartcharging.dto.event.PowerDistributionEvent;
 import com.ev.smartcharging.model.*;
 import com.ev.smartcharging.repository.ChargingGroupRepository;
 import com.ev.smartcharging.repository.ChargingSessionRepository;
 import com.ev.smartcharging.repository.ChargingStationRepository;
 import com.ev.smartcharging.repository.PowerProfileRepository;
+import com.ev.smartcharging.service.KafkaProducerService;
 import com.ev.smartcharging.service.SmartChargingService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class SmartChargingServiceImpl implements SmartChargingService {
     private final ChargingStationRepository chargingStationRepository;
     private final ChargingSessionRepository chargingSessionRepository;
     private final PowerProfileRepository powerProfileRepository;
+    private final KafkaProducerService kafkaProducerService;
 
     @Override
     @Transactional
@@ -134,6 +137,9 @@ public class SmartChargingServiceImpl implements SmartChargingService {
             if (station.getChargingGroup() != null) {
                 updateGroupPower(station.getChargingGroup().getId());
             }
+            
+            // Send power distribution event to the station via Kafka
+            sendPowerAdjustmentEvent(station.getId(), session.getConnectorId(), powerKW, session.getId());
             
             return true;
         } catch (Exception e) {
@@ -533,5 +539,61 @@ public class SmartChargingServiceImpl implements SmartChargingService {
                 .enabled(station.getEnabled())
                 .smartChargingEnabled(station.getSmartChargingEnabled())
                 .build();
+    }
+
+    /**
+     * Send a power adjustment event to a charging station.
+     * 
+     * @param stationId The ID of the charging station
+     * @param connectorId The ID of the connector
+     * @param powerKW The power limit to set
+     * @param sessionId The session ID related to this power adjustment
+     * @return The event ID of the sent event
+     */
+    private UUID sendPowerAdjustmentEvent(UUID stationId, Integer connectorId, Double powerKW, UUID sessionId) {
+        log.info("Sending power adjustment event to station {} connector {}: {} kW", 
+                stationId, connectorId, powerKW);
+                
+        PowerDistributionEvent.PowerAdjustmentReason reason = determineAdjustmentReason(stationId, sessionId);
+        
+        return kafkaProducerService.sendPowerAdjustmentCommand(
+                stationId,
+                connectorId,
+                powerKW,
+                reason,
+                false, // Not temporary unless it's an emergency
+                null,  // No duration for persistent changes
+                sessionId
+        );
+    }
+    
+    /**
+     * Determine the reason for power adjustment based on system state.
+     */
+    private PowerDistributionEvent.PowerAdjustmentReason determineAdjustmentReason(UUID stationId, UUID sessionId) {
+        try {
+            ChargingStation station = chargingStationRepository.findById(stationId).orElse(null);
+            
+            // If station is part of a group with near max capacity, it's load balancing
+            if (station != null && station.getChargingGroup() != null) {
+                ChargingGroup group = station.getChargingGroup();
+                if (group.getCurrentPowerKW() >= group.getMaxPowerKW() * 0.9) {
+                    return PowerDistributionEvent.PowerAdjustmentReason.LOAD_BALANCING;
+                }
+            }
+            
+            // Check if we have time-of-use pricing active
+            LocalDateTime now = LocalDateTime.now();
+            List<PowerProfile> activeProfiles = powerProfileRepository.findActiveProfiles(stationId, now);
+            if (!activeProfiles.isEmpty()) {
+                return PowerDistributionEvent.PowerAdjustmentReason.SCHEDULED_PROFILE;
+            }
+            
+            // Default to optimization
+            return PowerDistributionEvent.PowerAdjustmentReason.OPTIMIZATION;
+        } catch (Exception e) {
+            log.error("Error determining adjustment reason", e);
+            return PowerDistributionEvent.PowerAdjustmentReason.OPTIMIZATION;
+        }
     }
 } 
