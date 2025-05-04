@@ -134,6 +134,9 @@ services:
       - SPRINGDOC_API_DOCS_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
       - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
+      # Keycloak Configuration
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
 
   ## Auth Service
   auth-service:
@@ -165,13 +168,15 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       # Keycloak Configuration
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
-      - KEYCLOAK_REALM=evsaas
-      - KEYCLOAK_RESOURCE=evsaas-client
+      - KEYCLOAK_REALM=ev-platform
+      - KEYCLOAK_RESOURCE=auth-service
       - KEYCLOAK_SSL_REQUIRED=external
       - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       # Swagger Configuration
       - SPRINGDOC_API_DOCS_ENABLED=true
@@ -206,6 +211,9 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Keycloak Configuration
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
 
   ## Billing Service
   billing-service:
@@ -397,10 +405,44 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=http://api-gateway:8080
       - NODE_ENV=development
 
+  ## Keycloak for Identity and Access Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: ev-saas-keycloak
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - KC_DB_USERNAME=evsaas
+      - KC_DB_PASSWORD=evsaas_password
+      - KC_HOSTNAME=keycloak
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY=edge
+    command: start-dev --import-realm
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./infra/keycloak/realm-import:/opt/keycloak/data/import
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   postgres_data:
   timescaledb_data:
   redis_data:
+  keycloak_data:
 
 networks:
   ev-network:
