@@ -33,7 +33,7 @@ public class OpenApiConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("EV SaaS Platform Team")
-                                .email("support@evsaas.com")
+                                .email("support@nbevc.com")
                                 .url("https://www.nbevc.com/support"))
                         .license(new License()
                                 .name("Private License")
@@ -41,7 +41,7 @@ public class OpenApiConfig {
                         .termsOfService("https://www.nbevc.com/terms"))
                 .servers(Arrays.asList(
                         new Server().url("http://localhost:" + serverPort).description("Local Development Server"),
-                        new Server().url("https://api.evsaas.com").description("Production Server")))
+                        new Server().url("https://api.nbevc.com").description("Production Server")))
                 .components(new Components()
                         .addSecuritySchemes("bearer-jwt", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)

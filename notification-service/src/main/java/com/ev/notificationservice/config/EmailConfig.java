@@ -25,7 +25,7 @@ public class EmailConfig {
     @Value("${spring.mail.port:587}")
     private int port;
     
-    @Value("${spring.mail.username:noreply@evsaas.com}")
+    @Value("${spring.mail.username:noreply@nbevc.com}")
     private String username;
     
     @Value("${spring.mail.password:}")

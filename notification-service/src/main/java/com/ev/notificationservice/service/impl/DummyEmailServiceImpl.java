@@ -21,7 +21,7 @@ public class DummyEmailServiceImpl implements EmailService {
 
     private final JavaMailSender emailSender;
     
-    @Value("${spring.mail.username:noreply@evsaas.com}")
+    @Value("${spring.mail.username:noreply@nbevc.com}")
     private String fromEmail;
     
     public DummyEmailServiceImpl(JavaMailSender emailSender) {

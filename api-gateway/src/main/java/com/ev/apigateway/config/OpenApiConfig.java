@@ -29,12 +29,12 @@ public class OpenApiConfig {
                 .description("Local Development Server");
 
         Server productionServer = new Server()
-                .url("https://api.evsaas.com")
+                .url("https://api.nbevc.com")
                 .description("Production Server");
 
         Contact contact = new Contact()
                 .name("EV SaaS Platform Team")
-                .email("support@evsaas.com")
+                .email("support@nbevc.com")
                 .url("https://www.nbevc.com/support");
 
         License license = new License()
