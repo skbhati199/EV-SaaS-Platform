@@ -137,6 +137,11 @@ services:
       # Keycloak Configuration
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
+    # Enable Prometheus metrics endpoint for monitoring
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8080"
 
   ## Auth Service
   auth-service:
@@ -185,6 +190,12 @@ services:
       - SPRINGDOC_SWAGGER_UI_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
       - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8081"
 
   ## User Service
   user-service:
@@ -216,6 +227,12 @@ services:
       # Keycloak Configuration
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8082"
 
   ## Billing Service
   billing-service:
@@ -249,6 +266,12 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8083"
       
   ## Station Service (uses TimescaleDB for time-series data)
   station-service:
@@ -280,6 +303,12 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8084"
       
   ## Scheduler Service
   scheduler-service:
@@ -308,6 +337,12 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8086"
       
   ## Notification Service with Kafka
   notification-service:
@@ -342,6 +377,12 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8087"
       
   ## Smart Charging Service
   smart-charging:
@@ -378,6 +419,12 @@ services:
       # Keycloak Configuration
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8085"
 
   ## Roaming Service for OCPI protocol
   roaming-service:
@@ -395,6 +442,12 @@ services:
       - OCPI_PARTY_ID=EVP
       - OCPI_COUNTRY_CODE=US
       - OCPI_ROLE=CPO
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8088"
 
   ## Admin Portal
   admin-portal:
@@ -406,10 +459,12 @@ services:
       - "3001:3000"
     depends_on:
       - api-gateway
+      - grafana
     networks:
       - ev-network
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://api-gateway:8080
+      - NEXT_PUBLIC_GRAFANA_URL=http://localhost:3000
       - NODE_ENV=development
 
   ## Keycloak for Identity and Access Management
@@ -447,11 +502,92 @@ services:
       retries: 3
       start_period: 60s
 
+  ## Prometheus for metrics collection and monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ev-saas-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - api-gateway
+      - auth-service
+      - user-service
+      - station-service
+      - billing-service
+      - notification-service
+      - smart-charging
+      - roaming-service
+
+  ## Grafana for dashboards and visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ev-saas-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - prometheus
+      - loki
+
+  ## Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: ev-saas-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - ev-network
+    volumes:
+      - ./infra/monitoring/loki:/etc/loki
+      - loki_data:/loki
+
+  ## Promtail to ship logs to Loki
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ev-saas-promtail
+    volumes:
+      - /var/log:/var/log
+      - ./infra/monitoring/promtail:/etc/promtail
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - ev-network
+    depends_on:
+      - loki
+
 volumes:
   postgres_data:
   timescaledb_data:
   redis_data:
   keycloak_data:
+  grafana_data:
+  prometheus_data:
+  loki_data:
 
 networks:
   ev-network:

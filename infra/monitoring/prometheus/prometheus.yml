@@ -1,0 +1,68 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'spring-boot-services'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    consul_sd_configs:
+      - server: 'eureka-server:8761'
+        services: []
+    relabel_configs:
+      - source_labels: [__meta_consul_tags]
+        regex: '.*,prometheus,.*'
+        action: keep
+
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+  
+  - job_name: 'auth-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['auth-service:8081']
+  
+  - job_name: 'user-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['user-service:8082']
+  
+  - job_name: 'billing-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['billing-service:8083']
+  
+  - job_name: 'station-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['station-service:8084']
+  
+  - job_name: 'smart-charging'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['smart-charging:8085']
+  
+  - job_name: 'scheduler-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['scheduler-service:8086']
+  
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8087']
+  
+  - job_name: 'roaming-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['roaming-service:8088']
+  
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323'] 
