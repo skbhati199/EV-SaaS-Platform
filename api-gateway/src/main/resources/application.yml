@@ -210,24 +210,6 @@ springdoc:
     disabled: true
   default-produces-media-type: application/json
   default-consumes-media-type: application/json
-  # Add group info for API Gateway endpoints
-  group-configs:
-    - group: api-gateway
-      paths-to-match: /api-gateway/**
-    - group: auth-service
-      paths-to-match: /api/auth/**
-    - group: user-service
-      paths-to-match: /api/users/**
-    - group: station-service
-      paths-to-match: /api/stations/**
-    - group: roaming-service
-      paths-to-match: ['/api/roaming/**', '/ocpi/**']
-    - group: billing-service
-      paths-to-match: /api/billing/**
-    - group: smart-charging
-      paths-to-match: /api/smart-charging/**
-    - group: notification-service
-      paths-to-match: /api/notifications/**
 
 # Eureka Discovery Service Config
 eureka:
