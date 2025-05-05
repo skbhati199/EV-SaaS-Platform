@@ -4,6 +4,7 @@ import com.ev.notificationservice.config.KafkaConfig;
 import com.ev.notificationservice.dto.NotificationEvent;
 import com.ev.notificationservice.dto.event.InvoiceEvent;
 import com.ev.notificationservice.dto.event.PaymentEvent;
+import com.ev.notificationservice.dto.event.UserEvent;
 import com.ev.notificationservice.model.Notification;
 import com.ev.notificationservice.model.NotificationType;
 import com.ev.notificationservice.repository.NotificationRepository;
