@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Schema(description = "Response containing authentication tokens")
 public class TokenResponse {
     
@@ -23,4 +24,11 @@ public class TokenResponse {
     
     @Schema(description = "Token expiration time in seconds", example = "3600")
     private long expiresIn;
+    
+    public TokenResponse(String accessToken, String refreshToken) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.tokenType = "Bearer";
+        this.expiresIn = 3600; // Default 1 hour
+    }
 }

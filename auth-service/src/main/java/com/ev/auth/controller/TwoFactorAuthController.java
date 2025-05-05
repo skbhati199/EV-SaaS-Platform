@@ -1,8 +1,10 @@
 package com.ev.auth.controller;
 
+import com.ev.auth.dto.TwoFactorAuthRequest;
 import com.ev.auth.dto.TwoFactorEnableRequest;
 import com.ev.auth.dto.TwoFactorQrCodeResponse;
 import com.ev.auth.dto.TwoFactorVerifyRequest;
+import com.ev.auth.service.TOTPTwoFactorAuthService;
 import com.ev.auth.service.TwoFactorAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,6 +28,7 @@ import java.security.Principal;
 public class TwoFactorAuthController {
 
     private final TwoFactorAuthService twoFactorAuthService;
+    private final TOTPTwoFactorAuthService totpService;
 
     @PostMapping("/setup")
     @Operation(summary = "Set up 2FA", description = "Generates a TOTP secret and QR code for 2FA setup")
@@ -38,11 +41,11 @@ public class TwoFactorAuthController {
         
         log.info("Setting up 2FA for user: {}", username);
         
-        // Generate a secret
-        String secret = twoFactorAuthService.generateSecret(userId, username);
+        // Generate a secret - using the standard interface method
+        String secret = twoFactorAuthService.generateSecret(username);
         
-        // Generate a QR code
-        String qrCodeImage = twoFactorAuthService.generateQrCode(username, secret);
+        // Generate a QR code - using the implementation-specific method
+        String qrCodeImage = totpService.generateQrCode(username, secret);
         
         TwoFactorQrCodeResponse response = new TwoFactorQrCodeResponse(secret, qrCodeImage);
         return ResponseEntity.ok(response);
@@ -60,7 +63,15 @@ public class TwoFactorAuthController {
         
         log.info("Enabling 2FA for user: {}", username);
         
-        boolean enabled = twoFactorAuthService.enableTOTP(userId, request.getCode(), request.getSecret());
+        // Validate the code first
+        boolean codeValid = totpService.validateCode(request.getCode(), request.getSecret());
+        if (!codeValid) {
+            log.warn("Invalid 2FA code provided for user: {}", username);
+            return ResponseEntity.badRequest().body(false);
+        }
+        
+        // Enable 2FA for the user
+        boolean enabled = twoFactorAuthService.enable(username);
         
         if (enabled) {
             log.info("2FA enabled successfully for user: {}", username);
@@ -78,7 +89,14 @@ public class TwoFactorAuthController {
     public ResponseEntity<Boolean> verify(@Valid @RequestBody TwoFactorVerifyRequest request) {
         log.info("Verifying 2FA code for user: {}", request.getUsername());
         
-        boolean valid = twoFactorAuthService.validateCode(request.getCode(), request.getSecret());
+        // Create a new request object with the appropriate data
+        TwoFactorAuthRequest authRequest = TwoFactorAuthRequest.builder()
+                .username(request.getUsername())
+                .code(request.getCode())
+                .secret(request.getSecret())
+                .build();
+                
+        boolean valid = twoFactorAuthService.verifyCode(authRequest);
         
         if (valid) {
             log.info("2FA code verified successfully for user: {}", request.getUsername());
@@ -96,14 +114,18 @@ public class TwoFactorAuthController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> disable(Principal principal) {
         String username = principal.getName();
-        String userId = extractUserIdFromAuth();
         
         log.info("Disabling 2FA for user: {}", username);
         
-        twoFactorAuthService.disableTOTP(userId);
+        boolean disabled = twoFactorAuthService.disable(username);
         
-        log.info("2FA disabled successfully for user: {}", username);
-        return ResponseEntity.ok().build();
+        if (disabled) {
+            log.info("2FA disabled successfully for user: {}", username);
+            return ResponseEntity.ok().build();
+        } else {
+            log.warn("Failed to disable 2FA for user: {}", username);
+            return ResponseEntity.badRequest().build();
+        }
     }
     
     private String extractUserIdFromAuth() {

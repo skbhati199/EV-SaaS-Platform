@@ -19,8 +19,13 @@ import org.springframework.stereotype.Service;
 import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
-@Service
+/**
+ * @deprecated Use KeycloakAdminService instead
+ */
+@Deprecated
+@Service("legacyKeycloakService")
 @RequiredArgsConstructor
 @Slf4j
 public class KeycloakServiceImpl implements KeycloakService {
@@ -75,9 +80,11 @@ public class KeycloakServiceImpl implements KeycloakService {
         credential.setTemporary(false);
         usersResource.get(userId).resetPassword(credential);
         
-        // Assign role to user
-        RoleRepresentation roleRepresentation = realmResource.roles().get(request.getRole()).toRepresentation();
-        usersResource.get(userId).roles().realmLevel().add(Collections.singletonList(roleRepresentation));
+        // Assign role to user if specified
+        if (request.getRole() != null && !request.getRole().isEmpty()) {
+            RoleRepresentation roleRepresentation = realmResource.roles().get(request.getRole()).toRepresentation();
+            usersResource.get(userId).roles().realmLevel().add(Collections.singletonList(roleRepresentation));
+        }
         
         log.info("User created in Keycloak with ID: {}", userId);
         return userId;
@@ -138,6 +145,7 @@ public class KeycloakServiceImpl implements KeycloakService {
                     .realm(realm)
                     .clientId(clientId)
                     .clientSecret(clientSecret)
+                    .grantType("refresh_token")
                     .build();
             
             // In a real implementation, you would use the refresh token
@@ -155,6 +163,72 @@ public class KeycloakServiceImpl implements KeycloakService {
             log.error("Failed to refresh token: {}", e.getMessage());
             throw new AuthenticationException("Invalid refresh token");
         }
+    }
+    
+    @Override
+    public void updateUser(String userId, String email, String firstName, String lastName, Map<String, List<String>> attributes) {
+        Keycloak keycloakAdmin = getKeycloakAdminClient();
+        RealmResource realmResource = keycloakAdmin.realm(realm);
+        UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+        
+        if (email != null) {
+            user.setEmail(email);
+        }
+        
+        if (firstName != null) {
+            user.setFirstName(firstName);
+        }
+        
+        if (lastName != null) {
+            user.setLastName(lastName);
+        }
+        
+        if (attributes != null) {
+            user.setAttributes(attributes);
+        }
+        
+        realmResource.users().get(userId).update(user);
+        log.info("User updated in Keycloak with ID: {}", userId);
+    }
+    
+    @Override
+    public void deleteUser(String userId) {
+        Keycloak keycloakAdmin = getKeycloakAdminClient();
+        keycloakAdmin.realm(realm).users().get(userId).remove();
+        log.info("User deleted from Keycloak with ID: {}", userId);
+    }
+    
+    @Override
+    public void setUserPassword(String userId, String password) {
+        Keycloak keycloakAdmin = getKeycloakAdminClient();
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(password);
+        credential.setTemporary(false);
+        keycloakAdmin.realm(realm).users().get(userId).resetPassword(credential);
+        log.info("Password set for user in Keycloak with ID: {}", userId);
+    }
+    
+    @Override
+    public void assignRolesToUser(String userId, List<String> roleNames) {
+        Keycloak keycloakAdmin = getKeycloakAdminClient();
+        RealmResource realmResource = keycloakAdmin.realm(realm);
+        
+        List<RoleRepresentation> roles = roleNames.stream()
+                .map(roleName -> realmResource.roles().get(roleName).toRepresentation())
+                .toList();
+        
+        realmResource.users().get(userId).roles().realmLevel().add(roles);
+        log.info("Roles assigned to user in Keycloak with ID: {}", userId);
+    }
+    
+    @Override
+    public void setUserEnabled(String userId, boolean enabled) {
+        Keycloak keycloakAdmin = getKeycloakAdminClient();
+        UserRepresentation user = keycloakAdmin.realm(realm).users().get(userId).toRepresentation();
+        user.setEnabled(enabled);
+        keycloakAdmin.realm(realm).users().get(userId).update(user);
+        log.info("User enabled state set to {} for ID: {}", enabled, userId);
     }
     
     private Keycloak getKeycloakAdminClient() {

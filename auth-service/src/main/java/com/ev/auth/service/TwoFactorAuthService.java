@@ -18,126 +18,58 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
-public class TwoFactorAuthService {
-
-    private final SecretGenerator secretGenerator;
-    private final KeycloakService keycloakService;
-    
-    @Value("${app.2fa.issuer}")
-    private String issuer;
-    
-    @Value("${app.2fa.qrcode-size}")
-    private int qrCodeSize;
+/**
+ * Service interface for two-factor authentication
+ */
+public interface TwoFactorAuthService {
     
     /**
-     * Generate a TOTP secret for a user
+     * Validate a two-factor authentication code
      * 
-     * @param userId The user ID
+     * @param username The username
+     * @param code The authentication code
+     * @return True if the code is valid
+     */
+    boolean validate(String username, String code);
+    
+    /**
+     * Generate a secret for two-factor authentication
+     * 
      * @param username The username
      * @return The generated secret
      */
-    public String generateSecret(String userId, String username) {
-        // Generate a new TOTP secret
-        String secret = secretGenerator.generate();
-        
-        // Save the secret to the user's attributes in Keycloak
-        Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put("totpSecret", List.of(secret));
-        attributes.put("totpEnabled", List.of("false"));
-        
-        keycloakService.updateUser(userId, null, null, null, attributes);
-        
-        log.info("Generated TOTP secret for user: {}", username);
-        return secret;
-    }
+    String generateSecret(String username);
     
     /**
-     * Generate a QR code for a TOTP secret
+     * Enable two-factor authentication for a user
      * 
      * @param username The username
-     * @param secret The TOTP secret
-     * @return The QR code as a base64-encoded PNG image
+     * @return True if two-factor authentication was enabled
      */
-    public String generateQrCode(String username, String secret) {
-        QrData data = new QrData.Builder()
-                .label(username)
-                .secret(secret)
-                .issuer(issuer)
-                .algorithm(HashingAlgorithm.SHA1)
-                .digits(6)
-                .period(30)
-                .build();
-        
-        QrGenerator qrGenerator = new ZxingPngQrGenerator();
-        byte[] imageData;
-        
-        try {
-            imageData = qrGenerator.generate(data, qrCodeSize);
-        } catch (QrGenerationException e) {
-            log.error("Error generating QR code", e);
-            throw new RuntimeException("Failed to generate QR code", e);
-        }
-        
-        return "data:image/png;base64," + dev.samstevens.totp.util.Utils.getDataUriForImage(imageData, qrGenerator.getImageMimeType());
-    }
+    boolean enable(String username);
     
     /**
-     * Enable TOTP for a user
+     * Disable two-factor authentication for a user
      * 
-     * @param userId The user ID
-     * @param code The verification code
-     * @param secret The TOTP secret
-     * @return True if the code is valid and TOTP was enabled
+     * @param username The username
+     * @return True if two-factor authentication was disabled
      */
-    public boolean enableTOTP(String userId, String code, String secret) {
-        // Verify the code
-        if (!validateCode(code, secret)) {
-            log.warn("Invalid TOTP code provided for user ID: {}", userId);
-            return false;
-        }
-        
-        // Update the user's attributes in Keycloak
-        Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put("totpEnabled", List.of("true"));
-        
-        keycloakService.updateUser(userId, null, null, null, attributes);
-        
-        log.info("TOTP enabled for user ID: {}", userId);
-        return true;
-    }
+    boolean disable(String username);
     
     /**
-     * Disable TOTP for a user
+     * Get the QR code URL for setting up two-factor authentication
      * 
-     * @param userId The user ID
+     * @param username The username
+     * @param secret The two-factor authentication secret
+     * @return The QR code URL
      */
-    public void disableTOTP(String userId) {
-        // Update the user's attributes in Keycloak
-        Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put("totpSecret", List.of());
-        attributes.put("totpEnabled", List.of("false"));
-        
-        keycloakService.updateUser(userId, null, null, null, attributes);
-        
-        log.info("TOTP disabled for user ID: {}", userId);
-    }
+    String getQrCodeUrl(String username, String secret);
     
     /**
-     * Validate a TOTP code
+     * Verify a two-factor authentication code
      * 
-     * @param code The code to validate
-     * @param secret The TOTP secret
+     * @param request The two-factor authentication request
      * @return True if the code is valid
      */
-    public boolean validateCode(String code, String secret) {
-        TimeProvider timeProvider = new SystemTimeProvider();
-        CodeGenerator codeGenerator = new DefaultCodeGenerator();
-        CodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);
-        
-        // Check if the code is valid within the current time window (with a small allowable discrepancy)
-        return verifier.isValidCode(secret, code);
-    }
+    boolean verifyCode(TwoFactorAuthRequest request);
 } 

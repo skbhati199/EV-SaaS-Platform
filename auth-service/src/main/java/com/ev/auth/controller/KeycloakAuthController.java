@@ -1,6 +1,7 @@
 package com.ev.auth.controller;
 
 import com.ev.auth.dto.LoginRequest;
+import com.ev.auth.dto.LoginWithUsernameRequest;
 import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
 import com.ev.auth.service.KeycloakService;
@@ -28,22 +29,39 @@ public class KeycloakAuthController {
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     @ApiResponse(responseCode = "409", description = "Username or email already exists")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Registering user: {}", request.getUsername());
+    public ResponseEntity<String> registerUser(@Valid @RequestBody RegisterRequest request) {
+        log.info("Registering new user with username: {}", request.getUsername());
+        
         String userId = keycloakService.createUser(request);
         log.info("User registered successfully with ID: {}", userId);
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(userId);
     }
-
+    
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticates a user and returns JWT tokens")
     @ApiResponse(responseCode = "200", description = "Authentication successful")
     @ApiResponse(responseCode = "401", description = "Invalid credentials")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("User login attempt: {}", request.getUsername());
-        TokenResponse tokens = keycloakService.getTokens(request.getUsername(), request.getPassword());
-        log.info("User login successful: {}", request.getUsername());
-        return ResponseEntity.ok(tokens);
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginWithUsernameRequest request) {
+        log.info("Login attempt for username: {}", request.getUsername());
+        
+        TokenResponse tokenResponse = keycloakService.getTokens(request.getUsername(), request.getPassword());
+        log.info("User logged in: {}", request.getUsername());
+        
+        return ResponseEntity.ok(tokenResponse);
+    }
+    
+    @PostMapping("/email-login")
+    @Operation(summary = "Login with email and password", description = "Authenticates a user with email and returns JWT tokens")
+    public ResponseEntity<TokenResponse> loginWithEmail(@Valid @RequestBody LoginRequest request) {
+        log.info("Login attempt with email: {}", request.getEmail());
+        
+        // In a real implementation, you might need to look up the username by email
+        // For simplicity, we're using the email as the username here
+        TokenResponse tokenResponse = keycloakService.getTokens(request.getEmail(), request.getPassword());
+        log.info("User logged in with email: {}", request.getEmail());
+        
+        return ResponseEntity.ok(tokenResponse);
     }
 
     @PostMapping("/refresh-token")
