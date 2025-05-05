@@ -93,7 +93,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 ### 6. **Billing-Service** ✅
 - [x] Basic billing structure
 - [x] Session-based billing implementation
-- [ ] Payment gateway integration
+- [x] Payment gateway integration (Stripe)
 - [x] Invoice generation
 - [ ] Tax handling
 - [x] Kafka integration for payment events
@@ -104,7 +104,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Basic notification structure
 - [x] Kafka configuration and basic implementation
 - [x] Email notification template implementation
-- [ ] SMS integration
+- [x] SMS integration (Twilio)
 - [ ] Push notifications
 - [x] Consumer implementation for cross-service events
 - [x] Payment event notifications
@@ -226,16 +226,17 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
    - ✅ Implement event producers for load management
    - ✅ Implement event consumers for station telemetry
    - ✅ Connect to Station service for control commands
-4. Implement payment integration with external providers
-5. Implement comprehensive testing suite
-6. ✅ Create Grafana dashboards for all services
-7. ✅ Integrate Grafana with Admin Portal
-8. ✅ Continue Kafka event-driven architecture implementation:
+4. ✅ Implement payment integration with external providers (Stripe)
+5. ✅ Implement SMS notifications with Twilio
+6. Implement comprehensive testing suite
+7. ✅ Create Grafana dashboards for all services
+8. ✅ Integrate Grafana with Admin Portal
+9. ✅ Continue Kafka event-driven architecture implementation:
    - [x] User service events (complete)
    - [x] Roaming service events (complete)
    - [x] SmartCharging service events (complete)
-9. Complete OCPI protocol implementation
-10. ✅ Enhance WebSocket-based real-time event handling in Admin Portal
+10. Complete OCPI protocol implementation
+11. ✅ Enhance WebSocket-based real-time event handling in Admin Portal
 
 ## Smart Charging Implementation Plan
 The next focus area is implementing the Smart Charging service with Kafka integration:
