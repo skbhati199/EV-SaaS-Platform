@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV SaaS Platform API Gateway</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .service {
+            background-color: #f9f9f9;
+            border-left: 4px solid #0066cc;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-radius: 0 5px 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>EV SaaS Platform API Gateway</h1>
+    <p>Welcome to the EV SaaS Platform API Gateway. This gateway provides access to various microservices that power the EV SaaS Platform.</p>
+
+    <h2>Available Services</h2>
+
+    <div class="service">
+        <h3>Auth Service</h3>
+        <p>Authentication and authorization service.</p>
+        <p><strong>Base URL:</strong> <code>/api/auth/</code></p>
+        <p><strong>Documentation:</strong> <a href="/swagger-ui/">Swagger UI</a></p>
+    </div>
+
+    <div class="service">
+        <h3>User Service</h3>
+        <p>User management service.</p>
+        <p><strong>Base URL:</strong> <code>/api/users/</code></p>
+    </div>
+
+    <div class="service">
+        <h3>Station Service</h3>
+        <p>EV charging station management service.</p>
+        <p><strong>Base URL:</strong> <code>/api/stations/</code></p>
+    </div>
+
+    <div class="service">
+        <h3>Billing Service</h3>
+        <p>Billing and payment processing service.</p>
+        <p><strong>Base URL:</strong> <code>/api/billing/</code></p>
+    </div>
+
+    <div class="service">
+        <h3>Smart Charging Service</h3>
+        <p>Intelligent charging optimization service.</p>
+        <p><strong>Base URL:</strong> <code>/api/smart-charging/</code></p>
+    </div>
+
+    <div class="service">
+        <h3>Notification Service</h3>
+        <p>User notification service.</p>
+        <p><strong>Base URL:</strong> <code>/api/notifications/</code></p>
+    </div>
+
+    <div class="service">
+        <h3>Roaming Service</h3>
+        <p>OCPI implementation for roaming.</p>
+        <p><strong>Base URL:</strong> <code>/api/roaming/</code></p>
+        <p><strong>OCPI Endpoint:</strong> <code>/ocpi/</code></p>
+    </div>
+
+    <h2>API Documentation</h2>
+    <p>Access the API documentation via <a href="/swagger-ui/">Swagger UI</a>.</p>
+
+    <h2>Health Check</h2>
+    <p>A simple health check is available at <a href="/health">/health</a> to verify the gateway is running properly.</p>
+
+    <footer style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; font-size: 0.8em;">
+        &copy; 2025 EV SaaS Platform. All rights reserved.
+    </footer>
+</body>
+</html> 

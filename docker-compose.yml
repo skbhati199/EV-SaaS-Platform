@@ -113,35 +113,33 @@ services:
     networks:
       - ev-network
 
-  ## API Gateway
-  api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    container_name: ev-saas-gateway
+  ## Nginx Gateway (replaces API Gateway)
+  nginx:
+    image: nginx:alpine
+    container_name: ev-saas-nginx
     ports:
-      - "8080:8080"
+      - "8080:80"
+    volumes:
+      - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/docker/nginx/index.html:/usr/share/nginx/html/index.html:ro
+      - nginx_logs:/var/log/nginx
     depends_on:
-      eureka-server:
-        condition: service_healthy
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
     networks:
       - ev-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
-      - SPRINGDOC_SWAGGER_UI_ENABLED=true
-      - SPRINGDOC_API_DOCS_ENABLED=true
-      - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
-      - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
-      # Keycloak Configuration
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
-    # Enable Prometheus metrics endpoint for monitoring
-    labels:
-      - "prometheus.scrape=true"
-      - "prometheus.path=/actuator/prometheus"
-      - "prometheus.port=8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   ## Auth Service
   auth-service:
@@ -458,12 +456,12 @@ services:
     ports:
       - "3001:3000"
     depends_on:
-      - api-gateway
+      - nginx
       - grafana
     networks:
       - ev-network
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://api-gateway:8080
+      - NEXT_PUBLIC_API_BASE_URL=http://nginx:80
       - NEXT_PUBLIC_GRAFANA_URL=http://localhost:3000
       - NODE_ENV=development
 
@@ -528,7 +526,7 @@ services:
     networks:
       - ev-network
     depends_on:
-      - api-gateway
+      - nginx
       - auth-service
       - user-service
       - station-service
@@ -602,6 +600,7 @@ volumes:
   grafana_data:
   prometheus_data:
   loki_data:
+  nginx_logs:
 
 networks:
   ev-network:

@@ -16,6 +16,8 @@ This project is set up as a monorepo using TurboRepo, with the following structu
 ├── auth-service/         # Authentication service (Spring Boot)
 ├── billing-service/      # Billing management service (Spring Boot)
 ├── infra/                # Infrastructure configuration
+│   ├── docker/           # Docker configuration
+│   │   └── nginx/        # Nginx API Gateway configuration (alternative to Spring Cloud Gateway)
 ├── notification-service/ # Notification handling service (Spring Boot)
 ├── packages/             # Shared packages and utilities
 ├── libs/                 # Shared packages and utilities
@@ -73,6 +75,25 @@ yarn dev
 - To build all services: `yarn build`
 - To run tests: `yarn test`
 - To lint code: `yarn lint`
+
+### API Gateway Options
+
+The platform supports two API Gateway options:
+
+1. **Spring Cloud Gateway** (default): A Java-based API Gateway with built-in service discovery, circuit breaking, and JWT validation.
+2. **Nginx Gateway**: A lightweight, high-performance alternative with lower resource usage.
+
+To switch between gateways, use the included script:
+
+```bash
+# Switch to Nginx as the API Gateway
+./switch-gateway.sh nginx
+
+# Switch back to Spring Cloud Gateway
+./switch-gateway.sh spring
+```
+
+See `infra/docker/nginx/README.md` for more details on the Nginx Gateway implementation.
 
 ### Adding Dependencies
 
