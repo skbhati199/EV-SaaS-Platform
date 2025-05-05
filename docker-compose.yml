@@ -122,6 +122,7 @@ services:
     volumes:
       - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./infra/docker/nginx/index.html:/usr/share/nginx/html/index.html:ro
+      - ./infra/docker/nginx/custom-swagger.html:/usr/share/nginx/html/custom-swagger.html:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - auth-service
