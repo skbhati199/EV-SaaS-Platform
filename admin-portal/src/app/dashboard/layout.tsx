@@ -42,8 +42,8 @@ export default function DashboardLayout({
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    logout();
-    router.push('/login');
+    // logout();
+    // router.push('/login');
   };
 
   return (

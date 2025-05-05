@@ -83,12 +83,18 @@ export default function StationsPage() {
   };
 
   const handleStatusChange = (status: string) => {
-    setFilters({ ...filters, status });
+    setFilters({ 
+      ...filters, 
+      status: status === "all" ? undefined : status 
+    });
     setCurrentPage(1);
   };
 
   const handleLocationChange = (location: string) => {
-    setFilters({ ...filters, location });
+    setFilters({ 
+      ...filters, 
+      location: location === "all" ? undefined : location 
+    });
     setCurrentPage(1);
   };
 
@@ -152,26 +158,26 @@ export default function StationsPage() {
               <Button type="submit">Search</Button>
             </form>
             <div className="flex gap-2">
-              <Select onValueChange={handleStatusChange} defaultValue="">
+              <Select onValueChange={handleStatusChange} defaultValue="all">
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="ONLINE">Online</SelectItem>
                   <SelectItem value="OFFLINE">Offline</SelectItem>
                   <SelectItem value="PARTIALLY_AVAILABLE">Partially Available</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select onValueChange={handleLocationChange} defaultValue="">
+              <Select onValueChange={handleLocationChange} defaultValue="all">
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All locations</SelectItem>
+                  <SelectItem value="all">All locations</SelectItem>
                   <SelectItem value="San Francisco">San Francisco</SelectItem>
                   <SelectItem value="New York">New York</SelectItem>
                   <SelectItem value="Los Angeles">Los Angeles</SelectItem>

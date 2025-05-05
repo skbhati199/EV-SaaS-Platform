@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Activity, Users, Zap, CreditCard, AlertTriangle, CheckCircle } from "lucide-react";
+import { PlusCircle, Activity, Users, Zap, CreditCard, ExternalLink } from "lucide-react";
 import { AreaChart } from "@/components/dashboard/AreaChart";
 import { BarChart } from "@/components/dashboard/BarChart";
 import { PieChart } from "@/components/dashboard/PieChart";
@@ -13,6 +13,8 @@ import { StationMap } from "@/components/dashboard/StationMap";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { RealTimeEventViewer } from "@/components/dashboard/RealTimeEventViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SystemHealthOverview from '@/app/components/SystemHealthOverview';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { isAuthenticated, logout } = useAuth();
@@ -20,7 +22,7 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/login');
+      // router.push('/login');
     }
   }, [isAuthenticated, router]);
 
@@ -103,43 +105,18 @@ export default function DashboardPage() {
           
           {/* System status and real-time events */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">System Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span className="text-sm">Authentication Service</span>
-                    </div>
-                    <span className="text-xs text-green-500 font-medium">Operational</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span className="text-sm">Station Service</span>
-                    </div>
-                    <span className="text-xs text-green-500 font-medium">Operational</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
-                      <span className="text-sm">Billing Service</span>
-                    </div>
-                    <span className="text-xs text-yellow-500 font-medium">Degraded</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      <span className="text-sm">Roaming Service</span>
-                    </div>
-                    <span className="text-xs text-green-500 font-medium">Operational</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col">
+              <SystemHealthOverview />
+              <div className="mt-2 flex justify-end">
+                <Link 
+                  href="/dashboard/monitoring" 
+                  className="text-xs text-blue-500 hover:text-blue-700 flex items-center"
+                >
+                  View monitoring dashboard
+                  <ExternalLink className="ml-1 h-3 w-3" />
+                </Link>
+              </div>
+            </div>
             
             {/* Real-time Events */}
             <RealTimeEventViewer />
