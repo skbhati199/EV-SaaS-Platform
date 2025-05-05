@@ -35,4 +35,12 @@ public class BillingPlanDTO {
     private String features;
     
     private boolean isActive;
+    
+    private String currency;
+    
+    @DecimalMin(value = "0.0", inclusive = true, message = "Energy rate must be non-negative")
+    private BigDecimal energyRate;
+    
+    @DecimalMin(value = "0.0", inclusive = true, message = "Time rate must be non-negative")
+    private BigDecimal timeRate;
 }

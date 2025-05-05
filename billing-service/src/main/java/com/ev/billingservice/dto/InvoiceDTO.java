@@ -57,4 +57,12 @@ public class InvoiceDTO {
     private List<InvoiceItemDTO> invoiceItems;
     
     private List<PaymentDTO> payments;
+    
+    private String currency;
+    
+    @NotNull(message = "Issue date is required")
+    private LocalDateTime issuedAt;
+    
+    @NotNull(message = "Due date is required")
+    private LocalDateTime dueAt;
 } 

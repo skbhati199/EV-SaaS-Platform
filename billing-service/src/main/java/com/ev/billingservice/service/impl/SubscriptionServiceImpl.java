@@ -117,6 +117,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     
     @Override
     @Transactional(readOnly = true)
+    public SubscriptionDTO getActiveSubscriptionForUser(UUID userId) {
+        return subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
+                .map(this::mapToDTO)
+                .orElse(null);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
     public SubscriptionDTO getActiveSubscriptionByOrganizationId(UUID organizationId) {
         Subscription subscription = subscriptionRepository.findByOrganizationIdAndStatus(organizationId, SubscriptionStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Active Subscription", "organizationId", organizationId));

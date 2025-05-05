@@ -60,6 +60,15 @@ public class Invoice {
     @Column(name = "payment_date")
     private LocalDateTime paymentDate;
     
+    @Column(name = "currency", nullable = false)
+    private String currency;
+    
+    @Column(name = "issued_at", nullable = false)
+    private LocalDateTime issuedAt;
+    
+    @Column(name = "due_at", nullable = false)
+    private LocalDateTime dueAt;
+    
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceItem> invoiceItems;
     

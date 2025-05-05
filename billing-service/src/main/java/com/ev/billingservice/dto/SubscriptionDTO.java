@@ -28,6 +28,15 @@ public class SubscriptionDTO {
     @NotNull(message = "Plan ID is required")
     private UUID planId;
     
+    // Aliases for planId to maintain compatibility with existing code
+    public UUID getBillingPlanId() {
+        return planId;
+    }
+    
+    public void setBillingPlanId(UUID billingPlanId) {
+        this.planId = billingPlanId;
+    }
+    
     private BillingPlanDTO billingPlan;
     
     @NotNull(message = "Status is required")

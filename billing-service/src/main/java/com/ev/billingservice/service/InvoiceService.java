@@ -42,4 +42,6 @@ public interface InvoiceService {
     void processOverdueInvoices();
     
     void generateInvoicesForSubscriptions();
+    
+    UUID generateInvoiceForTransaction(UUID transactionId);
 } 

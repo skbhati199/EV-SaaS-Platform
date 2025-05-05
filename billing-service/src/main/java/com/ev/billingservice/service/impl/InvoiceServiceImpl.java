@@ -241,6 +241,37 @@ public class InvoiceServiceImpl implements InvoiceService {
         // Code omitted for brevity
     }
     
+    @Override
+    @Transactional
+    public UUID generateInvoiceForTransaction(UUID transactionId) {
+        // Implementation to generate an invoice for a specific transaction
+        
+        // In a real implementation, this would:
+        // 1. Look up the charging transaction
+        // 2. Create an invoice based on the transaction details
+        // 3. Create invoice items
+        // 4. Save and return the invoice ID
+        
+        // Placeholder implementation for now
+        log.info("Generating invoice for transaction: {}", transactionId);
+        
+        Invoice invoice = Invoice.builder()
+                .invoiceNumber(generateInvoiceNumber())
+                .status(InvoiceStatus.ISSUED)
+                .dueDate(LocalDateTime.now().plusDays(14))
+                .issuedAt(LocalDateTime.now())
+                .dueAt(LocalDateTime.now().plusDays(14))
+                .currency("USD")
+                .build();
+                
+        invoice = invoiceRepository.save(invoice);
+        
+        // Send notification
+        notificationService.sendInvoiceCreatedNotification(invoice);
+        
+        return invoice.getId();
+    }
+    
     private Invoice findInvoiceById(UUID id) {
         return invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice", "id", id));

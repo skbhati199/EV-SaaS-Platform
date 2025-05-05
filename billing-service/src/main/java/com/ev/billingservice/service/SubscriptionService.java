@@ -19,6 +19,8 @@ public interface SubscriptionService {
     
     SubscriptionDTO getActiveSubscriptionByUserId(UUID userId);
     
+    SubscriptionDTO getActiveSubscriptionForUser(UUID userId);
+    
     SubscriptionDTO getActiveSubscriptionByOrganizationId(UUID organizationId);
     
     List<SubscriptionDTO> getSubscriptionsByStatus(SubscriptionStatus status);

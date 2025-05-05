@@ -235,7 +235,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .invoiceNumber(invoice.getInvoiceNumber())
                 .totalAmount(invoice.getTotalAmount())
                 .currency(invoice.getCurrency())
-                .status(invoice.getStatus())
+                .status(invoice.getStatus().toString())
                 .issuedAt(invoice.getIssuedAt())
                 .dueAt(invoice.getDueAt())
                 .chargingSessionIds(Collections.singletonList(transaction.getSessionId()))
