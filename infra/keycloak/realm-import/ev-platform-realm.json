@@ -1,31 +1,77 @@
 {
+    "id": "ev-platform",
     "realm": "ev-platform",
+    "displayName": "EV Charging Platform",
     "enabled": true,
+    "sslRequired": "external",
     "registrationAllowed": false,
     "loginWithEmailAllowed": true,
     "duplicateEmailsAllowed": false,
     "resetPasswordAllowed": true,
     "editUsernameAllowed": false,
+    "bruteForceProtected": true,
+    "roles": {
+        "realm": [
+            {
+                "name": "platform_admin",
+                "description": "Platform Administrator"
+            },
+            {
+                "name": "cpo_admin",
+                "description": "Charge Point Operator Admin"
+            },
+            {
+                "name": "cpo_operator",
+                "description": "Charge Point Operator"
+            },
+            {
+                "name": "msp_admin",
+                "description": "Mobility Service Provider Admin"
+            },
+            {
+                "name": "msp_operator",
+                "description": "Mobility Service Provider Operator"
+            },
+            {
+                "name": "ev_driver",
+                "description": "EV Driver"
+            }
+        ]
+    },
     "clients": [
         {
+            "clientId": "admin-portal",
+            "name": "Admin Portal",
+            "rootUrl": "http://localhost:3001",
+            "baseUrl": "/",
+            "surrogateAuthRequired": false,
+            "enabled": true,
+            "alwaysDisplayInConsole": false,
+            "clientAuthenticatorType": "client-secret",
+            "redirectUris": [
+                "http://localhost:3001/*",
+                "http://admin-portal:3000/*"
+            ],
+            "webOrigins": [
+                "http://localhost:3001",
+                "http://admin-portal:3000"
+            ],
+            "publicClient": true,
+            "protocol": "openid-connect",
+            "attributes": {
+                "pkce.code.challenge.method": "S256"
+            }
+        },
+        {
             "clientId": "auth-service",
+            "name": "Authentication Service",
             "enabled": true,
             "clientAuthenticatorType": "client-secret",
             "secret": "defaultClientSecret",
-            "publicClient": false,
-            "redirectUris": [
-                "http://localhost:8081/*",
-                "http://auth-service:8081/*"
-            ],
-            "webOrigins": [
-                "+"
-            ],
-            "protocol": "openid-connect",
+            "bearerOnly": false,
             "serviceAccountsEnabled": true,
             "authorizationServicesEnabled": true,
-            "implicitFlowEnabled": false,
-            "directAccessGrantsEnabled": true,
-            "standardFlowEnabled": true
+            "directAccessGrantsEnabled": true
         },
         {
             "clientId": "api-gateway",
@@ -36,24 +82,6 @@
             "redirectUris": [
                 "http://localhost:8080/*",
                 "http://api-gateway:8080/*"
-            ],
-            "webOrigins": [
-                "+"
-            ],
-            "protocol": "openid-connect",
-            "implicitFlowEnabled": false,
-            "directAccessGrantsEnabled": true,
-            "standardFlowEnabled": true
-        },
-        {
-            "clientId": "admin-portal",
-            "enabled": true,
-            "clientAuthenticatorType": "client-secret",
-            "secret": "defaultClientSecret",
-            "publicClient": true,
-            "redirectUris": [
-                "http://localhost:3001/*",
-                "http://admin-portal:3000/*"
             ],
             "webOrigins": [
                 "+"
@@ -83,26 +111,6 @@
             "standardFlowEnabled": true
         }
     ],
-    "roles": {
-        "realm": [
-            {
-                "name": "admin",
-                "description": "Administrator role"
-            },
-            {
-                "name": "user",
-                "description": "Regular user role"
-            },
-            {
-                "name": "operator",
-                "description": "Charging station operator role"
-            },
-            {
-                "name": "customer",
-                "description": "EV customer role"
-            }
-        ]
-    },
     "users": [
         {
             "username": "admin",
@@ -119,7 +127,7 @@
                 }
             ],
             "realmRoles": [
-                "admin"
+                "platform_admin"
             ]
         },
         {
@@ -137,7 +145,7 @@
                 }
             ],
             "realmRoles": [
-                "user"
+                "ev_driver"
             ]
         }
     ]

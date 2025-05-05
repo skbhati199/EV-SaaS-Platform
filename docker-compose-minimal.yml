@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Database services
+  postgres:
+    image: postgres:14-alpine
+    container_name: ev-saas-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: evsaas
+      POSTGRES_PASSWORD: evsaas_password
+      POSTGRES_DB: evsaas_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/postgres:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evsaas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: ev-saas-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - ev-network
+    command: redis-server --save 60 1 --loglevel warning
+
+  # Eureka for service discovery
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: ev-saas-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # Keycloak for auth
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: ev-saas-keycloak
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - KC_DB_USERNAME=evsaas
+      - KC_DB_PASSWORD=evsaas_password
+      - KC_HOSTNAME=localhost
+      - KC_HTTP_ENABLED=true
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command: start-dev
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  keycloak_data:
+
+networks:
+  ev-network:
+    driver: bridge 

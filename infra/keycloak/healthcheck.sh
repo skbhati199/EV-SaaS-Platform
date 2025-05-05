@@ -1,15 +1,16 @@
 #!/bin/bash
+set -e
 
 # Wait for server to start
 sleep 10
 
 # Try admin endpoint - check if Keycloak admin console is accessible
-response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/auth/ -H "Host: localhost" --max-time 10)
+http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health)
 
-if [ "$response" = "200" ] || [ "$response" = "302" ]; then
+if [ "$http_code" = "200" ]; then
   echo "Keycloak health check: OK"
   exit 0
 else
-  echo "Keycloak health check failed with status: $response"
+  echo "Keycloak health check failed with status: $http_code"
   exit 1
 fi
