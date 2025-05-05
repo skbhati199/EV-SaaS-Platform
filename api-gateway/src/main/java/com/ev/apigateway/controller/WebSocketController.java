@@ -6,15 +6,15 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Controller;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Controller for handling WebSocket messages
+ * Temporarily disabled to resolve conflict with Spring Cloud Gateway
  */
-@Controller
+// @Controller
 @RequiredArgsConstructor
 @Slf4j
 public class WebSocketController {

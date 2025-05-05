@@ -5,8 +5,11 @@ spring:
   application:
     name: api-gateway
   # Allow bean definition overriding to fix conflict between WebSecurity and WebFluxSecurity
+  # and circular references as a temporary workaround
   main:
     allow-bean-definition-overriding: true
+    allow-circular-references: true
+    web-application-type: reactive
   # Add Kafka configuration
   kafka:
     bootstrap-servers: kafka:9092

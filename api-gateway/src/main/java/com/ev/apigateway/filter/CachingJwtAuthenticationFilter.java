@@ -27,8 +27,10 @@ import reactor.util.context.Context;
  * - Checks Redis cache for pre-validated tokens
  * - Falls back to normal JWT validation if not in cache
  * - Stores validated tokens in cache
+ * 
+ * NOTE: Currently disabled until proper ReactiveAuthenticationManager is configured
  */
-@Component
+// @Component - Temporarily disabled until ReactiveAuthenticationManager is properly configured
 @RequiredArgsConstructor
 @Slf4j
 public class CachingJwtAuthenticationFilter implements GlobalFilter, Ordered {

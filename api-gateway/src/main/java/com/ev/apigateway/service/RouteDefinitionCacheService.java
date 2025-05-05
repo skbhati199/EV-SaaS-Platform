@@ -1,9 +1,11 @@
 package com.ev.apigateway.service;
 
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionRepository;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -19,17 +21,47 @@ import java.time.Duration;
  * - Records cache hit/miss statistics
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class RouteDefinitionCacheService implements RouteDefinitionRepository {
 
     private final ReactiveRedisTemplate<String, Object> redisTemplate;
-    private final RouteDefinitionRepository originalRepository;
+    private final ApplicationContext applicationContext;
     private final CacheStatisticsService cacheStatisticsService;
+    
+    private RouteDefinitionRepository originalRepository;
     
     private static final String ROUTE_CACHE_KEY = "api-gateway:routes";
     private static final Duration ROUTE_CACHE_TTL = Duration.ofHours(1);
     private static final String CACHE_TYPE = "routes";
+
+    @Autowired
+    public RouteDefinitionCacheService(
+            ReactiveRedisTemplate<String, Object> redisTemplate,
+            ApplicationContext applicationContext,
+            CacheStatisticsService cacheStatisticsService) {
+        this.redisTemplate = redisTemplate;
+        this.applicationContext = applicationContext;
+        this.cacheStatisticsService = cacheStatisticsService;
+    }
+    
+    @PostConstruct
+    public void init() {
+        // Get the original repository after bean creation is complete
+        String[] beanNames = applicationContext.getBeanNamesForType(RouteDefinitionRepository.class);
+        for (String beanName : beanNames) {
+            Object bean = applicationContext.getBean(beanName);
+            if (bean != this && bean instanceof RouteDefinitionRepository) {
+                this.originalRepository = (RouteDefinitionRepository) bean;
+                log.info("Found original RouteDefinitionRepository: {}", beanName);
+                break;
+            }
+        }
+        
+        if (this.originalRepository == null) {
+            log.warn("No original RouteDefinitionRepository found, falling back to empty repository");
+            this.originalRepository = new EmptyRouteDefinitionRepository();
+        }
+    }
 
     @Override
     public Flux<RouteDefinition> getRouteDefinitions() {
@@ -57,6 +89,10 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
 
     @Override
     public Mono<Void> save(Mono<RouteDefinition> route) {
+        if (originalRepository == null) {
+            return Mono.empty();
+        }
+        
         return originalRepository.save(route)
                 .doOnSuccess(v -> {
                     // When a route is saved, invalidate the cache
@@ -66,6 +102,10 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
 
     @Override
     public Mono<Void> delete(Mono<String> routeId) {
+        if (originalRepository == null) {
+            return Mono.empty();
+        }
+        
         return originalRepository.delete(routeId)
                 .doOnSuccess(v -> {
                     // When a route is deleted, invalidate the cache
@@ -77,6 +117,10 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
      * Fetch routes from original repository and cache them
      */
     private Flux<RouteDefinition> fetchAndCacheRoutes() {
+        if (originalRepository == null) {
+            return Flux.empty();
+        }
+        
         return originalRepository.getRouteDefinitions()
                 .collectList()
                 .doOnNext(routes -> {
@@ -116,6 +160,10 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
      * Manually refresh the route cache
      */
     public Mono<Boolean> refreshCache() {
+        if (originalRepository == null) {
+            return Mono.just(false);
+        }
+        
         return invalidateCache()
                 .then(Mono.defer(() -> 
                     originalRepository.getRouteDefinitions()
@@ -137,5 +185,26 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
                     log.error("Error refreshing route definition cache: {}", e.getMessage());
                     return Mono.just(false);
                 });
+    }
+    
+    /**
+     * Empty implementation of RouteDefinitionRepository that returns no routes
+     * Used as a fallback when no original repository is found
+     */
+    private static class EmptyRouteDefinitionRepository implements RouteDefinitionRepository {
+        @Override
+        public Flux<RouteDefinition> getRouteDefinitions() {
+            return Flux.empty();
+        }
+
+        @Override
+        public Mono<Void> save(Mono<RouteDefinition> route) {
+            return Mono.empty();
+        }
+
+        @Override
+        public Mono<Void> delete(Mono<String> routeId) {
+            return Mono.empty();
+        }
     }
 } 

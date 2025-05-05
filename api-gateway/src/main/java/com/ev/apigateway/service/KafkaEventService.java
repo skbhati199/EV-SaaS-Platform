@@ -13,8 +13,9 @@ import java.util.Map;
 
 /**
  * Service that consumes Kafka events and forwards them to WebSocket clients
+ * Temporarily disabled to resolve conflict with Spring Cloud Gateway
  */
-@Service
+// @Service
 @RequiredArgsConstructor
 @Slf4j
 public class KafkaEventService {

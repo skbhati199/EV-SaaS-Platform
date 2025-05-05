@@ -1,9 +1,11 @@
 package com.ev.apigateway.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
@@ -52,6 +54,7 @@ public class RedisConfig {
      * Creates a reactive Redis connection factory
      */
     @Bean
+    @Primary
     public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
         RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration();
         redisConfig.setHostName(redisHost);
@@ -102,7 +105,7 @@ public class RedisConfig {
     /**
      * Creates a standard Redis connection factory for the cache manager
      */
-    @Bean
+    @Bean("standardRedisConnectionFactory")
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration();
         redisConfig.setHostName(redisHost);
@@ -128,7 +131,7 @@ public class RedisConfig {
      * Configure Redis Cache Manager with appropriate TTL values for different cache types
      */
     @Bean
-    public RedisCacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
+    public RedisCacheManager redisCacheManager(@Qualifier("standardRedisConnectionFactory") RedisConnectionFactory connectionFactory) {
         // Default cache configuration with TTL of 5 minutes
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5))

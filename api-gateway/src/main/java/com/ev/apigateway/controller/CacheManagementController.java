@@ -2,8 +2,9 @@ package com.ev.apigateway.controller;
 
 import com.ev.apigateway.service.CacheStatisticsService;
 import com.ev.apigateway.service.RouteDefinitionCacheService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.http.ResponseEntity;
@@ -25,13 +26,22 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api-gateway/admin/cache")
-@RequiredArgsConstructor
 @Slf4j
 public class CacheManagementController {
 
     private final ReactiveRedisTemplate<String, Object> redisTemplate;
-    private final RouteDefinitionCacheService routeDefinitionCacheService;
     private final CacheStatisticsService cacheStatisticsService;
+    private final ApplicationContext applicationContext;
+
+    @Autowired
+    public CacheManagementController(
+            ReactiveRedisTemplate<String, Object> redisTemplate,
+            CacheStatisticsService cacheStatisticsService,
+            ApplicationContext applicationContext) {
+        this.redisTemplate = redisTemplate;
+        this.cacheStatisticsService = cacheStatisticsService;
+        this.applicationContext = applicationContext;
+    }
 
     /**
      * Get detailed cache statistics
@@ -133,7 +143,10 @@ public class CacheManagementController {
     @PostMapping("/routes/refresh")
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<Map<String, Object>>> refreshRoutesCache() {
-        return routeDefinitionCacheService.refreshCache()
+        // Get the service on demand to break the circular dependency
+        RouteDefinitionCacheService routeService = applicationContext.getBean(RouteDefinitionCacheService.class);
+        
+        return routeService.refreshCache()
                 .map(result -> {
                     Map<String, Object> responseMap = new HashMap<>();
                     responseMap.put("status", result ? "success" : "error");
