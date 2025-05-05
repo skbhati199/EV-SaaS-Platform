@@ -584,7 +584,13 @@ public class SmartChargingServiceImpl implements SmartChargingService {
             
             // Check if we have time-of-use pricing active
             LocalDateTime now = LocalDateTime.now();
-            List<PowerProfile> activeProfiles = powerProfileRepository.findActiveProfiles(stationId, now);
+            String dayOfWeek = now.getDayOfWeek().toString();
+            List<PowerProfile> activeProfiles = powerProfileRepository.findActiveProfiles(
+                    stationId, 
+                    station != null && station.getChargingGroup() != null ? station.getChargingGroup().getId() : null, 
+                    dayOfWeek, 
+                    now.toLocalTime());
+                    
             if (!activeProfiles.isEmpty()) {
                 return PowerDistributionEvent.PowerAdjustmentReason.SCHEDULED_PROFILE;
             }

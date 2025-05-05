@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/smart-charging")
@@ -109,12 +110,12 @@ public class SmartChargingController {
                     
                     // Send emergency reduction command
                     return kafkaProducerService.sendEmergencyPowerReduction(
-                            UUID.fromString(station.getId()), 
+                            UUID.fromString(station.getId().toString()), // FIX: Convert UUID to String then back to ensure it's a proper UUID
                             null, // Apply to whole station
                             reducedPower,
                             durationSeconds);
                 })
-                .toList();
+                .collect(Collectors.toList()); // FIX: Use collect instead of toList to ensure proper type conversion
         
         return ResponseEntity.ok(eventIds);
     }
