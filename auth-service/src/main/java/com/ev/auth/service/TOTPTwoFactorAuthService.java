@@ -12,6 +12,7 @@ import dev.samstevens.totp.time.TimeProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -22,6 +23,7 @@ import java.util.Map;
  * Implementation of TwoFactorAuthService using TOTP (Time-based One-Time Password)
  */
 @Service
+@Primary
 @RequiredArgsConstructor
 @Slf4j
 public class TOTPTwoFactorAuthService implements TwoFactorAuthService {

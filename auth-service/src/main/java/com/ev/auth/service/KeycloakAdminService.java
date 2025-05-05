@@ -13,6 +13,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import jakarta.ws.rs.core.Response;
@@ -24,6 +25,7 @@ import java.util.Map;
  * Implementation of KeycloakService for managing users via Keycloak Admin API
  */
 @Service
+@Primary
 @RequiredArgsConstructor
 @Slf4j
 public class KeycloakAdminService implements KeycloakService {

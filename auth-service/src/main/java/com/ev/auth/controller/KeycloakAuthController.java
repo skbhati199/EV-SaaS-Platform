@@ -11,15 +11,22 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Legacy auth controller using direct Keycloak integration
+ * @deprecated Use AuthController instead
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "Authentication APIs using Keycloak")
+@Profile("legacy") // Only activate in legacy profile
+@Deprecated
 public class KeycloakAuthController {
 
     private final KeycloakService keycloakService;

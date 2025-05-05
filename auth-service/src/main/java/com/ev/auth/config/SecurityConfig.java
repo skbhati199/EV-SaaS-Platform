@@ -84,19 +84,22 @@ public class SecurityConfig {
     
     @Bean
     public Converter<Jwt, Collection<GrantedAuthority>> jwtGrantedAuthoritiesConverter() {
-        return jwt -> {
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-            
-            if (realmAccess == null || !realmAccess.containsKey("roles")) {
-                return List.of();
+        return new Converter<Jwt, Collection<GrantedAuthority>>() {
+            @Override
+            public Collection<GrantedAuthority> convert(Jwt jwt) {
+                Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+                
+                if (realmAccess == null || !realmAccess.containsKey("roles")) {
+                    return List.of();
+                }
+                
+                @SuppressWarnings("unchecked")
+                List<String> roles = (List<String>) realmAccess.get("roles");
+                
+                return roles.stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                        .collect(Collectors.toList());
             }
-            
-            @SuppressWarnings("unchecked")
-            List<String> roles = (List<String>) realmAccess.get("roles");
-            
-            return roles.stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                    .collect(Collectors.toList());
         };
     }
     
