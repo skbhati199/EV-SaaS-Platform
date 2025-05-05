@@ -189,7 +189,7 @@ services:
       - SPRINGDOC_API_DOCS_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
-      - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
+      - SPRINGDOC_API_DOCS_PATH=/api-docs
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     labels:

@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+
 
 @Configuration
 @EnableWebSecurity
@@ -35,13 +37,14 @@ public class SecurityConfig {
     private String jwkSetUri;
     
     @Value("${app.cors.allowed-origins}")
-    private List<String> allowedOrigins;
-    
+    private String allowedOrigins;
+
     @Value("${app.cors.allowed-methods}")
-    private List<String> allowedMethods;
-    
+    private String allowedMethods;
+
     @Value("${app.cors.allowed-headers}")
-    private List<String> allowedHeaders;
+    private String allowedHeaders;
+
     
     @Value("${app.cors.max-age}")
     private long maxAge;
@@ -58,13 +61,13 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh-token").permitAll()
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
-                .requestMatchers("/swagger-resources/**", "/swagger-ui.html/**").permitAll()
-                .requestMatchers("/swagger-ui/index.html", "/swagger-ui/swagger-initializer.js").permitAll()
-                .requestMatchers("/swagger-config", "/api-docs/**").permitAll()
-                .requestMatchers("/api/v1/docs/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers(
+                    "/api-docs/**", "/v3/api-docs/**", 
+                    "/swagger-ui/**", "/swagger-ui.html",
+                    "/swagger-resources/**",
+                    "/webjars/**"
+                ).permitAll()
+
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -110,9 +113,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(allowedMethods);
-        configuration.setAllowedHeaders(allowedHeaders);
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
+        configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(maxAge);
         
