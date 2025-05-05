@@ -569,10 +569,17 @@ services:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - ev-network
+      ev-network:
+        aliases:
+          - loki
     volumes:
       - ./infra/monitoring/loki:/etc/loki
       - loki_data:/loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   ## Promtail to ship logs to Loki
   promtail:
