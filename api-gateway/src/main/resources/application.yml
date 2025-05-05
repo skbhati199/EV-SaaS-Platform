@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: api-gateway
+  # Allow bean definition overriding to fix conflict between WebSecurity and WebFluxSecurity
+  main:
+    allow-bean-definition-overriding: true
   # Add Kafka configuration
   kafka:
     bootstrap-servers: kafka:9092
@@ -181,6 +184,18 @@ spring:
               args:
                 name: notification-service
                 fallbackUri: forward:/api-gateway/service-fallback/notifications
+
+        # Add a direct route for auth service Swagger UI
+        - id: auth-swagger-ui
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth-swagger-ui/**
+          filters:
+            - RewritePath=/auth-swagger-ui/(?<segment>.*), /$\{segment}
+            - name: CircuitBreaker
+              args:
+                name: auth-service
+                fallbackUri: forward:/api-gateway/service-fallback/auth
 
       # Set default filters for all routes
       default-filters:

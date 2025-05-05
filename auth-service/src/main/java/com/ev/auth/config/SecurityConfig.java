@@ -60,6 +60,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh-token").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
+                .requestMatchers("/swagger-resources/**", "/swagger-ui.html/**").permitAll()
+                .requestMatchers("/swagger-ui/index.html", "/swagger-ui/swagger-initializer.js").permitAll()
+                .requestMatchers("/swagger-config", "/api-docs/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )

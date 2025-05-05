@@ -8,6 +8,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisConfiguration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -64,10 +65,15 @@ public class RedisConfig {
                 .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
                 .build();
 
-        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
-                .clientOptions(clientOptions)
-                .useSsl(redisSsl)
-                .build();
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder builder = LettuceClientConfiguration.builder()
+                .clientOptions(clientOptions);
+                
+        // Apply SSL configuration if enabled
+        if (redisSsl) {
+            builder.useSsl();
+        }
+        
+        LettuceClientConfiguration clientConfig = builder.build();
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(redisConfig, clientConfig);
         log.info("Configured Redis connection to {}:{}", redisHost, redisPort);
@@ -94,10 +100,35 @@ public class RedisConfig {
     }
 
     /**
+     * Creates a standard Redis connection factory for the cache manager
+     */
+    @Bean
+    public RedisConnectionFactory redisConnectionFactory() {
+        RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration();
+        redisConfig.setHostName(redisHost);
+        redisConfig.setPort(redisPort);
+        
+        if (redisPassword != null && !redisPassword.isEmpty()) {
+            redisConfig.setPassword(redisPassword);
+        }
+
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder builder = LettuceClientConfiguration.builder();
+        
+        // Apply SSL configuration if enabled
+        if (redisSsl) {
+            builder.useSsl();
+        }
+        
+        LettuceClientConfiguration clientConfig = builder.build();
+
+        return new LettuceConnectionFactory(redisConfig, clientConfig);
+    }
+
+    /**
      * Configure Redis Cache Manager with appropriate TTL values for different cache types
      */
     @Bean
-    public RedisCacheManager redisCacheManager(ReactiveRedisConnectionFactory connectionFactory) {
+    public RedisCacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
         // Default cache configuration with TTL of 5 minutes
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5))

@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,8 @@ public class RouteCacheConfig {
                 .and()
                 .method(HttpMethod.GET)
                 .filters(f -> f
-                    .retry(config -> config.setRetries(3).setStatuses(500, 503))
+                    .retry(config -> config.setRetries(3)
+                                          .setStatuses(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.SERVICE_UNAVAILABLE))
                 )
                 .metadata(getCacheMetadata(300)) // 5 minutes TTL
                 .uri("lb://station-service")
@@ -46,7 +48,8 @@ public class RouteCacheConfig {
                 .and()
                 .method(HttpMethod.GET)
                 .filters(f -> f
-                    .retry(config -> config.setRetries(2).setStatuses(500, 503))
+                    .retry(config -> config.setRetries(2)
+                                          .setStatuses(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.SERVICE_UNAVAILABLE))
                 )
                 .metadata(getCacheMetadata(30)) // 30 seconds TTL
                 .uri("lb://station-service")
@@ -57,7 +60,8 @@ public class RouteCacheConfig {
                 .and()
                 .method(HttpMethod.GET)
                 .filters(f -> f
-                    .retry(config -> config.setRetries(3).setStatuses(500, 503))
+                    .retry(config -> config.setRetries(3)
+                                          .setStatuses(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.SERVICE_UNAVAILABLE))
                 )
                 .metadata(getCacheMetadata(600)) // 10 minutes TTL
                 .uri("lb://user-service")

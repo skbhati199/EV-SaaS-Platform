@@ -4,12 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.RedisServerCommands;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -96,7 +98,8 @@ public class CacheStatisticsService {
                 Map<String, Object> redisInfo = new HashMap<>();
                 
                 // Extract memory information
-                String[] lines = info.split("\r\n");
+                String infoStr = info.toString();
+                String[] lines = infoStr.split("\r\n");
                 for (String line : lines) {
                     if (line.startsWith("used_memory:")) {
                         redisInfo.put("usedMemory", Long.parseLong(line.split(":")[1]));
@@ -160,7 +163,8 @@ public class CacheStatisticsService {
      * Count keys matching a pattern
      */
     private Mono<Long> countKeys(String pattern) {
-        return redisTemplate.scan(pattern)
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).build();
+        return redisTemplate.scan(options)
             .count()
             .onErrorReturn(0L);
     }

@@ -58,7 +58,8 @@ public class GlobalCacheFilter implements GlobalFilter, Ordered {
                 .flatMap(cachedResponse -> {
                     log.debug("Cache hit for: {}", cacheKey);
                     cacheStatisticsService.recordCacheHit(CACHE_TYPE);
-                    return Mono.just(cachedResponse);
+                    // Process the cached response
+                    return chain.filter(exchange);
                 })
                 .switchIfEmpty(
                     // Cache miss - proceed with the request chain but capture and cache the response

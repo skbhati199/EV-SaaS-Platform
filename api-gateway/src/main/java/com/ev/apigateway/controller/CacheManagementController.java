@@ -5,9 +5,11 @@ import com.ev.apigateway.service.RouteDefinitionCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -59,11 +61,12 @@ public class CacheManagementController {
     @PostMapping("/stats/reset")
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<Map<String, Object>>> resetStatistics() {
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("status", "success");
+        responseMap.put("message", "Cache statistics reset successfully");
+        
         return cacheStatisticsService.resetStatistics()
-                .then(Mono.just(ResponseEntity.ok(Map.of(
-                        "status", "success",
-                        "message", "Cache statistics reset successfully"
-                ))));
+                .then(Mono.just(ResponseEntity.ok(responseMap)));
     }
 
     /**
@@ -72,16 +75,18 @@ public class CacheManagementController {
     @DeleteMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<Map<String, Object>>> clearAllCaches() {
+        Map<String, Object> successMap = new HashMap<>();
+        successMap.put("status", "success");
+        successMap.put("message", "All caches cleared successfully");
+        
+        Map<String, Object> errorMap = new HashMap<>();
+        errorMap.put("status", "error");
+        errorMap.put("message", "Failed to clear caches");
+        
         return redisTemplate.getConnectionFactory().getReactiveConnection()
                 .serverCommands().flushAll()
-                .thenReturn(ResponseEntity.ok(Map.of(
-                        "status", "success",
-                        "message", "All caches cleared successfully"
-                )))
-                .onErrorReturn(ResponseEntity.status(500).body(Map.of(
-                        "status", "error",
-                        "message", "Failed to clear caches"
-                )));
+                .thenReturn(ResponseEntity.ok(successMap))
+                .onErrorReturn(ResponseEntity.status(500).body(errorMap));
     }
 
     /**
@@ -92,27 +97,34 @@ public class CacheManagementController {
     public Mono<ResponseEntity<Map<String, Object>>> clearCacheByPrefix(@PathVariable String cachePrefix) {
         // We'll use SCAN to find keys with the prefix and then delete them
         String keyPattern = "api-gateway:" + cachePrefix + "*";
+        ScanOptions options = ScanOptions.scanOptions().match(keyPattern).build();
         
-        return redisTemplate.scan(keyPattern)
+        Map<String, Object> emptyMap = new HashMap<>();
+        emptyMap.put("status", "success");
+        emptyMap.put("message", "No keys found with prefix: " + cachePrefix);
+        
+        return redisTemplate.scan(options)
                 .collectList()
                 .flatMap(keys -> {
                     if (keys.isEmpty()) {
-                        return Mono.just(ResponseEntity.ok(Map.of(
-                                "status", "success",
-                                "message", "No keys found with prefix: " + cachePrefix
-                        )));
+                        return Mono.just(ResponseEntity.ok(emptyMap));
                     }
                     
-                    return redisTemplate.delete(keys.toArray())
-                            .thenReturn(ResponseEntity.ok(Map.of(
-                                    "status", "success",
-                                    "message", String.format("Cleared %d keys with prefix: %s", keys.size(), cachePrefix)
-                            )));
+                    Map<String, Object> successMap = new HashMap<>();
+                    successMap.put("status", "success");
+                    successMap.put("message", String.format("Cleared %d keys with prefix: %s", keys.size(), cachePrefix));
+                    
+                    return Flux.fromIterable(keys)
+                            .flatMap(key -> redisTemplate.delete((String)key))
+                            .reduce(0L, (count, deleted) -> count + deleted)
+                            .map(totalDeleted -> ResponseEntity.ok(successMap));
                 })
-                .onErrorReturn(ResponseEntity.status(500).body(Map.of(
-                        "status", "error",
-                        "message", "Failed to clear cache with prefix: " + cachePrefix
-                )));
+                .onErrorResume(e -> {
+                    Map<String, Object> errorMap = new HashMap<>();
+                    errorMap.put("status", "error");
+                    errorMap.put("message", "Failed to clear cache with prefix: " + cachePrefix);
+                    return Mono.just(ResponseEntity.status(500).body(errorMap));
+                });
     }
 
     /**
@@ -122,14 +134,18 @@ public class CacheManagementController {
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<Map<String, Object>>> refreshRoutesCache() {
         return routeDefinitionCacheService.refreshCache()
-                .map(result -> ResponseEntity.ok(Map.of(
-                        "status", result ? "success" : "error",
-                        "message", result ? "Routes cache refreshed successfully" : "Failed to refresh routes cache"
-                )))
-                .onErrorReturn(ResponseEntity.status(500).body(Map.of(
-                        "status", "error",
-                        "message", "Error refreshing routes cache"
-                )));
+                .map(result -> {
+                    Map<String, Object> responseMap = new HashMap<>();
+                    responseMap.put("status", result ? "success" : "error");
+                    responseMap.put("message", result ? "Routes cache refreshed successfully" : "Failed to refresh routes cache");
+                    return ResponseEntity.ok(responseMap);
+                })
+                .onErrorResume(e -> {
+                    Map<String, Object> errorMap = new HashMap<>();
+                    errorMap.put("status", "error");
+                    errorMap.put("message", "Error refreshing routes cache");
+                    return Mono.just(ResponseEntity.status(500).body(errorMap));
+                });
     }
 
     /**
@@ -139,15 +155,19 @@ public class CacheManagementController {
     public Mono<ResponseEntity<Map<String, Object>>> getCacheHealth() {
         return redisTemplate.getConnectionFactory().getReactiveConnection()
                 .ping()
-                .map(pong -> ResponseEntity.ok(Map.of(
-                        "status", "up",
-                        "redis", "connected",
-                        "ping", pong
-                )))
-                .onErrorReturn(ResponseEntity.ok(Map.of(
-                        "status", "down",
-                        "redis", "disconnected",
-                        "error", "Cannot connect to Redis"
-                )));
+                .map(pong -> {
+                    Map<String, Object> successMap = new HashMap<>();
+                    successMap.put("status", "up");
+                    successMap.put("redis", "connected");
+                    successMap.put("ping", pong);
+                    return ResponseEntity.ok(successMap);
+                })
+                .onErrorResume(e -> {
+                    Map<String, Object> errorMap = new HashMap<>();
+                    errorMap.put("status", "down");
+                    errorMap.put("redis", "disconnected");
+                    errorMap.put("error", "Cannot connect to Redis");
+                    return Mono.just(ResponseEntity.ok(errorMap));
+                });
     }
 } 

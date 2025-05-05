@@ -1,69 +1,31 @@
 package com.ev.auth.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-import org.springdoc.core.models.GroupedOpenApi;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * OpenAPI Configuration for Auth Service
+ * OpenAPI Configuration for Auth Service - Simplified version
  */
 @Configuration
 public class OpenApiConfig {
 
     @Value("${server.port:8081}")
     private String serverPort;
-    
-    private final Environment environment;
-    
-    public OpenApiConfig(Environment environment) {
-        this.environment = environment;
-    }
 
     @Bean
     public OpenAPI authServiceOpenAPI() {
-        List<Server> servers = new ArrayList<>();
-        
-        // Check if Docker profile is active
-        boolean isDockerProfile = Arrays.asList(environment.getActiveProfiles()).contains("docker");
-        
-        if (isDockerProfile) {
-            // Docker environment servers
-            servers.add(new Server()
-                    .url("http://auth-service:8081")
-                    .description("Docker Direct Access"));
-            
-            servers.add(new Server()
-                    .url("http://api-gateway:8080/api/auth")
-                    .description("Docker API Gateway"));
-        } else {
-            // Standard environment servers
-            servers.add(new Server()
-                    .url("http://localhost:" + serverPort)
-                    .description("Local Direct Access"));
-                
-            servers.add(new Server()
-                    .url("http://localhost:8080/api/auth")
-                    .description("Local API Gateway"));
-                
-            servers.add(new Server()
-                    .url("https://api.evsaas.com/api/auth")
-                    .description("Production Server"));
-        }
-
         return new OpenAPI()
                 .info(new Info()
                         .title("Auth Service API")
@@ -77,7 +39,13 @@ public class OpenApiConfig {
                                 .name("Private License")
                                 .url("https://www.nbevc.com/license"))
                         .termsOfService("https://www.nbevc.com/terms"))
-                .servers(servers)
+                .servers(Arrays.asList(
+                        new Server()
+                                .url("http://localhost:" + serverPort)
+                                .description("Local Development Server"),
+                        new Server()
+                                .url("http://auth-service:8081")
+                                .description("Docker Environment Server")))
                 .components(new Components()
                         .addSecuritySchemes("bearer-jwt", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
@@ -86,18 +54,5 @@ public class OpenApiConfig {
                                 .in(SecurityScheme.In.HEADER)
                                 .name("Authorization")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
-    }
-    
-    /**
-     * Make sure the group ID matches the one defined in API Gateway
-     */
-    @Bean
-    public GroupedOpenApi authServiceApi() {
-        return GroupedOpenApi.builder()
-                .group("auth-service")
-                .packagesToScan("com.ev.auth.controller")
-                .pathsToMatch("/auth/**", "/oauth/**", "/api/v1/**")
-                .displayName("Auth Service API")
-                .build();
     }
 } 

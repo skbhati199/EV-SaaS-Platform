@@ -104,6 +104,7 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
      */
     private Mono<Boolean> invalidateCache() {
         return redisTemplate.delete(ROUTE_CACHE_KEY)
+                .map(result -> result > 0)
                 .doOnSuccess(result -> log.debug("Route definition cache invalidated"))
                 .onErrorResume(e -> {
                     log.error("Error invalidating route definition cache: {}", e.getMessage());
@@ -121,12 +122,15 @@ public class RouteDefinitionCacheService implements RouteDefinitionRepository {
                         .collectList()
                         .flatMap(routes -> {
                             if (!routes.isEmpty()) {
-                                return redisTemplate.opsForList().rightPushAll(ROUTE_CACHE_KEY, routes.toArray())
-                                        .then(redisTemplate.expire(ROUTE_CACHE_KEY, ROUTE_CACHE_TTL));
+                                // If routes exist, push them to the cache and set expiration
+                                Object[] routeArray = routes.toArray(new Object[0]);
+                                return redisTemplate.opsForList().rightPushAll(ROUTE_CACHE_KEY, routeArray)
+                                        .flatMap(count -> redisTemplate.expire(ROUTE_CACHE_KEY, ROUTE_CACHE_TTL)
+                                                .thenReturn(count));
                             }
                             return Mono.just(0L);
                         })
-                        .map(count -> count > 0)
+                        .map(count -> count > 0L)
                 ))
                 .doOnSuccess(result -> log.info("Route definition cache refreshed manually"))
                 .onErrorResume(e -> {
