@@ -13,10 +13,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
- * OpenAPI Configuration for Auth Service - Simplified version
+ * OpenAPI Configuration for Auth Service
  */
 @Configuration
 public class OpenApiConfig {
@@ -26,6 +25,18 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI authServiceOpenAPI() {
+        // Define the security scheme
+        SecurityScheme securityScheme = new SecurityScheme()
+                .name("Authorization")
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT")
+                .in(SecurityScheme.In.HEADER);
+
+        // Create security requirement
+        SecurityRequirement securityRequirement = new SecurityRequirement();
+        securityRequirement.addList("bearerAuth");
+
         return new OpenAPI()
                 .info(new Info()
                         .title("Auth Service API")
@@ -33,26 +44,16 @@ public class OpenApiConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("EV SaaS Platform Team")
-                                .email("support@evsaas.com")
+                                .email("support@nbevc.com")
                                 .url("https://www.nbevc.com/support"))
                         .license(new License()
                                 .name("Private License")
                                 .url("https://www.nbevc.com/license"))
                         .termsOfService("https://www.nbevc.com/terms"))
                 .servers(Arrays.asList(
-                        new Server()
-                                .url("http://localhost:" + serverPort)
-                                .description("Local Development Server"),
-                        new Server()
-                                .url("http://auth-service:8081")
-                                .description("Docker Environment Server")))
+                        new Server().url("http://localhost:" + serverPort).description("Local Development Server")))
                 .components(new Components()
-                        .addSecuritySchemes("bearer-jwt", new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .in(SecurityScheme.In.HEADER)
-                                .name("Authorization")))
-                .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
+                        .addSecuritySchemes("bearerAuth", securityScheme))
+                .addSecurityItem(securityRequirement);
     }
 } 

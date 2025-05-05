@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Service Swagger UI Test</title>
+    <link rel="stylesheet" type="text/css"
+        href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #header {
+            background-color: #0066cc;
+            color: white;
+            padding: 10px 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        #header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        #content {
+            margin: 20px;
+        }
+
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #6c757d;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header">
+        <h1>Auth Service Swagger UI Direct Test</h1>
+    </div>
+
+    <div id="content">
+        <div id="status">Loading...</div>
+        <div id="swagger-ui"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.js"></script>
+    <script>
+        // Direct URL to auth service
+        const specUrl = 'http://localhost:8081/v3/api-docs';
+        const statusDiv = document.getElementById('status');
+
+        // First try to fetch the OpenAPI spec
+        fetch(specUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(spec => {
+                // Spec fetched successfully, initialize Swagger UI
+                statusDiv.style.borderLeftColor = '#28a745';
+                statusDiv.innerHTML = 'OpenAPI spec loaded successfully!';
+
+                window.ui = SwaggerUIBundle({
+                    spec: spec,
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: "StandaloneLayout"
+                });
+            })
+            .catch(error => {
+                // Error fetching spec
+                statusDiv.style.borderLeftColor = '#dc3545';
+                statusDiv.innerHTML = `<strong>Error loading OpenAPI spec:</strong><br>${error.message}<br><br>
+                    <p>Please check if:</p>
+                    <ul>
+                        <li>The auth service is running</li>
+                        <li>CORS is properly configured</li>
+                        <li>The OpenAPI is enabled and configured correctly</li>
+                    </ul>
+                    <p>You can also try accessing the spec directly at: <a href="${specUrl}" target="_blank">${specUrl}</a></p>`;
+            });
+    </script>
+</body>
+
+</html>

@@ -60,7 +60,7 @@ public class OpenApiConfig {
 
         Contact contact = new Contact()
                 .name("EV SaaS Platform Team")
-                .email("support@evsaas.com")
+                .email("support@nbevc.com")
                 .url("https://www.nbevc.com/support");
 
         License license = new License()
