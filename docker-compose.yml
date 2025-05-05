@@ -155,7 +155,7 @@ services:
       - "8081:8081"
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       postgres:
         condition: service_healthy
       eureka-server:
@@ -398,7 +398,7 @@ services:
       kafka:
         condition: service_started
       keycloak:
-        condition: service_healthy
+        condition: service_started
       eureka-server:
         condition: service_started
     networks:
@@ -473,6 +473,7 @@ services:
     container_name: ev-saas-keycloak
     ports:
       - "8090:8080"
+      - "9000:9000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -492,11 +493,21 @@ services:
       - KC_HTTP_ENABLED=true
       - KC_PROXY=edge
       - KC_HEALTH_ENABLED=true
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_ADMIN=admin
     command: start-dev --import-realm
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/keycloak/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./infra/keycloak/realm-import:/opt/keycloak/data/import
+      - ./infra/keycloak/healthcheck.sh:/opt/keycloak/bin/healthcheck.sh
 
   ## Prometheus for metrics collection and monitoring
   prometheus:
