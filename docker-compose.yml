@@ -124,6 +124,7 @@ services:
       - ./infra/docker/nginx/index.html:/usr/share/nginx/html/index.html:ro
       - ./infra/docker/nginx/custom-swagger.html:/usr/share/nginx/html/custom-swagger.html:ro
       - ./infra/docker/nginx/auth-swagger-test.html:/usr/share/nginx/html/auth-swagger-test.html:ro
+      - ./infra/docker/nginx/billing-swagger-test.html:/usr/share/nginx/html/billing-swagger-test.html:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - auth-service
@@ -252,6 +253,8 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+      kafka:
+        condition: service_started
     networks:
       - ev-network
     environment:
@@ -271,6 +274,12 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Swagger Configuration
+      - SPRINGDOC_API_DOCS_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
+      - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     labels:
