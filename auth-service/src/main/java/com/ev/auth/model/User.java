@@ -76,7 +76,6 @@ public class User implements UserDetails {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        id = UUID.randomUUID();
         if (!accountNonExpired) accountNonExpired = true;
         if (!accountNonLocked) accountNonLocked = true;
         if (!credentialsNonExpired) credentialsNonExpired = true;

@@ -60,28 +60,4 @@ public interface KeycloakService {
      * @param userId The Keycloak user ID
      */
     void deleteUser(String userId);
-    
-    /**
-     * Set a user's password
-     * 
-     * @param userId The Keycloak user ID
-     * @param password The new password
-     */
-    void setUserPassword(String userId, String password);
-    
-    /**
-     * Assign roles to a user
-     * 
-     * @param userId The Keycloak user ID
-     * @param roleNames The role names to assign
-     */
-    void assignRolesToUser(String userId, List<String> roleNames);
-    
-    /**
-     * Enable or disable a user
-     * 
-     * @param userId The Keycloak user ID
-     * @param enabled Whether the user should be enabled
-     */
-    void setUserEnabled(String userId, boolean enabled);
 }

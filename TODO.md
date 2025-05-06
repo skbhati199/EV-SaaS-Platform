@@ -103,8 +103,8 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 ### 7. **Notification-Service** ✅
 - [x] Basic notification structure
 - [x] Kafka configuration and basic implementation
-- [x] Email notification template implementation
-- [x] SMS integration (Twilio)
+- [ ] Email notification template implementation
+- [ ] SMS integration (Twilio)
 - [ ] Push notifications
 - [x] Consumer implementation for cross-service events
 - [x] Payment event notifications

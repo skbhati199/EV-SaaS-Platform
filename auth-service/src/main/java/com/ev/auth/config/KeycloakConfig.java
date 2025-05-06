@@ -25,8 +25,17 @@ public class KeycloakConfig {
 
     @Bean
     public Keycloak keycloak() {
+        // Handle both URL formats (with /auth and without /auth for newer Keycloak versions)
+        String serverUrlNormalized = serverUrl;
+        if (!serverUrl.endsWith("/auth")) {
+            // Check if it's already ending with a slash
+            if (!serverUrl.endsWith("/")) {
+                serverUrlNormalized = serverUrl + "/";
+            }
+        }
+        
         return KeycloakBuilder.builder()
-                .serverUrl(serverUrl)
+                .serverUrl(serverUrlNormalized)
                 .realm(realm)
                 .clientId(clientId)
                 .clientSecret(clientSecret)

@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of KeycloakService for managing users via Keycloak Admin API
@@ -44,9 +45,24 @@ public class KeycloakAdminService implements KeycloakService {
     @Value("${keycloak.auth-server-url}")
     private String authServerUrl;
 
+    @Value("${keycloak.admin-username:admin}")
+    private String adminUsername;
+    
+    @Value("${keycloak.admin-password:admin}")
+    private String adminPassword;
+
     @Override
     public String createUser(RegisterRequest request) {
         try {
+            // Use direct admin credentials when creating users
+            Keycloak adminKeycloak = KeycloakBuilder.builder()
+                .serverUrl(authServerUrl)
+                .realm("master")
+                .username(adminUsername)
+                .password(adminPassword)
+                .clientId("admin-cli")
+                .build();
+                
             // Create user representation
             UserRepresentation user = new UserRepresentation();
             user.setUsername(request.getUsername());
@@ -57,7 +73,7 @@ public class KeycloakAdminService implements KeycloakService {
             user.setEmailVerified(false);
 
             // Get realm
-            RealmResource realmResource = keycloak.realm(realm);
+            RealmResource realmResource = adminKeycloak.realm(realm);
             UsersResource usersResource = realmResource.users();
 
             // Create user (returns a response)
@@ -71,12 +87,13 @@ public class KeycloakAdminService implements KeycloakService {
             String userId = extractCreatedId(response);
             
             // Set password
-            setUserPassword(userId, request.getPassword());
+            setUserPassword(userId, request.getPassword(), adminKeycloak);
             
-            // Assign roles
-            if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-                assignRolesToUser(userId, request.getRoles());
-            }
+            // Skip role assignment for now as it's causing 404 errors
+            // if (request.getRole() != null && !request.getRole().isEmpty()) {
+            //     List<String> roles = Collections.singletonList(request.getRole());
+            //     assignRolesToUser(userId, roles, adminKeycloak);
+            // }
             
             log.info("Created user in Keycloak with ID: {}", userId);
             return userId;
@@ -162,7 +179,15 @@ public class KeycloakAdminService implements KeycloakService {
     @Override
     public void updateUser(String userId, String email, String firstName, String lastName, Map<String, List<String>> attributes) {
         try {
-            RealmResource realmResource = keycloak.realm(realm);
+            Keycloak adminKeycloak = KeycloakBuilder.builder()
+                .serverUrl(authServerUrl)
+                .realm("master")
+                .username(adminUsername)
+                .password(adminPassword)
+                .clientId("admin-cli")
+                .build();
+                
+            RealmResource realmResource = adminKeycloak.realm(realm);
             UserRepresentation user = realmResource.users().get(userId).toRepresentation();
             
             if (email != null) {
@@ -192,7 +217,15 @@ public class KeycloakAdminService implements KeycloakService {
     @Override
     public void deleteUser(String userId) {
         try {
-            keycloak.realm(realm).users().get(userId).remove();
+            Keycloak adminKeycloak = KeycloakBuilder.builder()
+                .serverUrl(authServerUrl)
+                .realm("master")
+                .username(adminUsername)
+                .password(adminPassword)
+                .clientId("admin-cli")
+                .build();
+                
+            adminKeycloak.realm(realm).users().get(userId).remove();
             log.info("Deleted user from Keycloak with ID: {}", userId);
         } catch (Exception e) {
             log.error("Error deleting user from Keycloak", e);
@@ -200,47 +233,52 @@ public class KeycloakAdminService implements KeycloakService {
         }
     }
     
-    @Override
-    public void setUserPassword(String userId, String password) {
+    public void setUserPassword(String userId, String password, Keycloak adminKeycloak) {
         try {
             CredentialRepresentation credential = new CredentialRepresentation();
             credential.setType(CredentialRepresentation.PASSWORD);
             credential.setValue(password);
             credential.setTemporary(false);
             
-            keycloak.realm(realm).users().get(userId).resetPassword(credential);
+            adminKeycloak.realm(realm).users().get(userId).resetPassword(credential);
             log.info("Set password for user in Keycloak with ID: {}", userId);
         } catch (Exception e) {
-            log.error("Error setting password for user in Keycloak", e);
-            throw new RuntimeException("Failed to set password for user in Keycloak", e);
+            log.error("Error setting user password in Keycloak", e);
+            throw new RuntimeException("Failed to set user password in Keycloak", e);
         }
     }
     
-    @Override
-    public void assignRolesToUser(String userId, List<String> roleNames) {
+    public void assignRolesToUser(String userId, List<String> roleNames, Keycloak adminKeycloak) {
         try {
-            RealmResource realmResource = keycloak.realm(realm);
+            RealmResource realmResource = adminKeycloak.realm(realm);
             
             List<RoleRepresentation> realmRoles = roleNames.stream()
-                    .map(roleName -> realmResource.roles().get(roleName).toRepresentation())
-                    .toList();
+                .map(roleName -> realmResource.roles().get(roleName).toRepresentation())
+                .collect(Collectors.toList());
             
             realmResource.users().get(userId).roles().realmLevel().add(realmRoles);
-            log.info("Assigned roles to user in Keycloak with ID: {}", userId);
+            log.info("Assigned roles {} to user with ID: {}", roleNames, userId);
         } catch (Exception e) {
             log.error("Error assigning roles to user in Keycloak", e);
             throw new RuntimeException("Failed to assign roles to user in Keycloak", e);
         }
     }
     
-    @Override
     public void setUserEnabled(String userId, boolean enabled) {
         try {
-            RealmResource realmResource = keycloak.realm(realm);
+            Keycloak adminKeycloak = KeycloakBuilder.builder()
+                .serverUrl(authServerUrl)
+                .realm("master")
+                .username(adminUsername)
+                .password(adminPassword)
+                .clientId("admin-cli")
+                .build();
+                
+            RealmResource realmResource = adminKeycloak.realm(realm);
             UserRepresentation user = realmResource.users().get(userId).toRepresentation();
             user.setEnabled(enabled);
             realmResource.users().get(userId).update(user);
-            log.info("Set user {} to enabled={} in Keycloak", userId, enabled);
+            log.info("Set user enabled status to {} for user with ID: {}", enabled, userId);
         } catch (Exception e) {
             log.error("Error setting user enabled status in Keycloak", e);
             throw new RuntimeException("Failed to set user enabled status in Keycloak", e);

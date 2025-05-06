@@ -15,4 +15,10 @@ public class HelloController {
     public ResponseEntity<String> hello() {
         return ResponseEntity.ok("Hello from Docker!");
     }
+    
+    @GetMapping("/health")
+    @Operation(summary = "Health Check", description = "This endpoint returns the health status of the service.")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("Auth service is healthy!");
+    }
 }

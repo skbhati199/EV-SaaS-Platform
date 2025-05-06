@@ -198,7 +198,6 @@ public class KeycloakServiceImpl implements KeycloakService {
         log.info("User deleted from Keycloak with ID: {}", userId);
     }
     
-    @Override
     public void setUserPassword(String userId, String password) {
         Keycloak keycloakAdmin = getKeycloakAdminClient();
         CredentialRepresentation credential = new CredentialRepresentation();
@@ -209,7 +208,6 @@ public class KeycloakServiceImpl implements KeycloakService {
         log.info("Password set for user in Keycloak with ID: {}", userId);
     }
     
-    @Override
     public void assignRolesToUser(String userId, List<String> roleNames) {
         Keycloak keycloakAdmin = getKeycloakAdminClient();
         RealmResource realmResource = keycloakAdmin.realm(realm);
@@ -222,7 +220,6 @@ public class KeycloakServiceImpl implements KeycloakService {
         log.info("Roles assigned to user in Keycloak with ID: {}", userId);
     }
     
-    @Override
     public void setUserEnabled(String userId, boolean enabled) {
         Keycloak keycloakAdmin = getKeycloakAdminClient();
         UserRepresentation user = keycloakAdmin.realm(realm).users().get(userId).toRepresentation();

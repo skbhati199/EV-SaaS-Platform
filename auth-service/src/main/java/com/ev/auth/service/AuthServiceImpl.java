@@ -128,10 +128,15 @@ public class AuthServiceImpl implements AuthService {
             throw new ValidationException("Email already exists");
         }
         
+        // Provide a default role if none specified
+        if (request.getRole() == null || request.getRole().isEmpty()) {
+            request.setRole("USER");
+        }
+        
         try {
             Role.valueOf(request.getRole());
         } catch (IllegalArgumentException e) {
-            throw new ValidationException("Invalid role");
+            throw new ValidationException("Invalid role: " + request.getRole());
         }
     }
 }

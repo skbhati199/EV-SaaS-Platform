@@ -72,7 +72,13 @@ public class SecurityConfig {
                     "/swagger-resources/**",
                     "/webjars/**"
                 ).permitAll()
-
+                .requestMatchers(
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/refresh",
+                    "/api/v1/auth/validate",
+                    "/api/v1/hello"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -138,7 +144,9 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/swagger-resources/**", 
                     "/webjars/**",
-                    "/api-docs/**"
+                    "/api-docs/**",
+                    "/api/v1/hello",
+                    "/api/v1/health"
                 );
     }
 }
