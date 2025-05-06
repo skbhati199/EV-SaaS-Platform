@@ -38,7 +38,7 @@ public class ChargingSessionEvent {
     /**
      * ID of the connector
      */
-    private UUID connectorId;
+    private Integer connectorId;
     
     /**
      * Type of event (STARTED, UPDATED, ENDED)
@@ -88,12 +88,12 @@ public class ChargingSessionEvent {
     /**
      * Current meter start in kWh
      */
-    private BigDecimal meterStart;
+    private Integer meterStart;
     
     /**
      * Current meter value in kWh
      */
-    private BigDecimal meterValue;
+    private Integer meterStop;
     
     /**
      * Reason for ending the session (if applicable)

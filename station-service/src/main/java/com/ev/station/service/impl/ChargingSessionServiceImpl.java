@@ -93,12 +93,17 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
 
     @Override
     public ChargingSessionDto startChargingSession(UUID stationId, StartChargingSessionRequest request) {
+        // Just delegate to startSession - the stationId is already passed to the connector query
         return startSession(request);
     }
 
     @Override
     public ChargingSessionDto stopChargingSession(UUID stationId, StopChargingSessionRequest request) {
-        return endSession(request.getSessionId(), request.getStopReason());
+        // Find the session by transaction ID since StopChargingSessionRequest doesn't have sessionId
+        ChargingSession session = sessionRepository.findByTransactionId(request.getTransactionId())
+                .orElseThrow(() -> new IllegalArgumentException("Charging session not found with transaction ID: " + request.getTransactionId()));
+        
+        return endSession(session.getId(), request.getStopReason());
     }
 
     @Override
@@ -120,37 +125,49 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
     public ChargingSessionDto startSession(StartChargingSessionRequest request) {
         log.info("Starting charging session for connector: {}", request.getConnectorId());
         
-        Connector connector = connectorRepository.findById(request.getConnectorId())
-                .orElseThrow(() -> new IllegalArgumentException("Connector not found: " + request.getConnectorId()));
-        
-        if (connector.getStatus() != EVSEStatus.AVAILABLE) {
-            throw new IllegalStateException("Connector is not available: " + connector.getStatus());
+        // Get station ID from the startChargingSession method parameter
+        UUID stationId = null;
+        if (request.getConnectorId() != null) {
+            // Find connector first - we'll need to query by ID
+            List<Connector> connectors = connectorRepository.findAll();
+            Connector connector = connectors.stream()
+                    .filter(c -> c.getConnectorId().equals(request.getConnectorId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Connector not found: " + request.getConnectorId()));
+            
+            if (connector.getStatus() != StationStatus.AVAILABLE) {
+                throw new IllegalStateException("Connector is not available: " + connector.getStatus());
+            }
+            
+            stationId = connector.getStation().getId();
+            
+            // Create new session
+            ChargingSession session = ChargingSession.builder()
+                    .stationId(stationId)
+                    .connectorId(request.getConnectorId())
+                    .userId(request.getUserId())
+                    .idTag(request.getIdTag())
+                    .startTimestamp(LocalDateTime.now())
+                    .transactionId(request.getTransactionId())
+                    .meterStart(request.getMeterStart())
+                    .status(SessionStatus.IN_PROGRESS)
+                    .startReason(request.getStartReason())
+                    .build();
+            
+            // Update connector status
+            connector.setStatus(StationStatus.CHARGING);
+            connectorRepository.save(connector);
+            
+            // Save session
+            session = sessionRepository.save(session);
+            
+            // Send Kafka event
+            sendChargingSessionEvent(session, "STARTED", null);
+            
+            return mapToDto(session);
+        } else {
+            throw new IllegalArgumentException("Connector ID is required");
         }
-        
-        // Create new session
-        ChargingSession session = ChargingSession.builder()
-                .stationId(connector.getStationId())
-                .connectorId(request.getConnectorId())
-                .userId(request.getUserId())
-                .idTag(request.getIdTag())
-                .startTimestamp(LocalDateTime.now())
-                .transactionId(UUID.randomUUID().toString())
-                .meterStart(request.getMeterStart())
-                .status(SessionStatus.IN_PROGRESS)
-                .startReason(request.getStartReason())
-                .build();
-        
-        // Update connector status
-        connector.setStatus(EVSEStatus.CHARGING);
-        connectorRepository.save(connector);
-        
-        // Save session
-        session = sessionRepository.save(session);
-        
-        // Send Kafka event
-        sendChargingSessionEvent(session, "STARTED", null);
-        
-        return mapToDto(session);
     }
 
     @Override
@@ -200,10 +217,15 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         session = sessionRepository.save(session);
         
         // Update connector status
-        Connector connector = connectorRepository.findById(session.getConnectorId())
-                .orElseThrow(() -> new IllegalArgumentException("Connector not found: " + session.getConnectorId()));
+        // Ensure that stationId is a UUID and connectorId is an Integer
+        UUID stationId = session.getStationId(); // This is already a UUID
+        Integer connectorId = session.getConnectorId(); // This is already an Integer
         
-        connector.setStatus(EVSEStatus.AVAILABLE);
+        Connector connector = connectorRepository.findByStationIdAndConnectorId(stationId, connectorId)
+                .orElseThrow(() -> new IllegalArgumentException("Connector not found for station ID: " + 
+                    stationId + " and connector ID: " + connectorId));
+        
+        connector.setStatus(StationStatus.AVAILABLE);
         connectorRepository.save(connector);
         
         // Send Kafka event
@@ -258,11 +280,11 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                 .connectorId(session.getConnectorId())
                 .userId(session.getUserId())
                 .idTag(session.getIdTag())
-                .startTime(session.getStartTimestamp())
-                .endTime(session.getStopTimestamp())
+                .startTimestamp(session.getStartTimestamp())
+                .stopTimestamp(session.getStopTimestamp())
                 .meterStart(session.getMeterStart())
                 .meterStop(session.getMeterStop())
-                .energyDelivered(session.getTotalEnergyKwh())
+                .totalEnergyKwh(session.getTotalEnergyKwh())
                 .status(session.getStatus())
                 .startReason(session.getStartReason())
                 .stopReason(session.getStopReason())
