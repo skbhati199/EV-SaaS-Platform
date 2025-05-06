@@ -204,12 +204,14 @@ services:
       dockerfile: Dockerfile
     container_name: ev-saas-user
     ports:
-      - "8082:8082"
+      - "8084:8084"
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+      kafka:
+        condition: service_started
     networks:
       - ev-network
     environment:
@@ -218,12 +220,13 @@ services:
       - SPRING_DATASOURCE_USERNAME=evsaas
       - SPRING_DATASOURCE_PASSWORD=evsaas_password
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SERVER_PORT=8082
+      - SERVER_PORT=8084
       - SPRING_FLYWAY_ENABLED=false
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       # Keycloak Configuration
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
@@ -232,7 +235,7 @@ services:
     labels:
       - "prometheus.scrape=true"
       - "prometheus.path=/actuator/prometheus"
-      - "prometheus.port=8082"
+      - "prometheus.port=8084"
 
   ## Billing Service
   billing-service:
@@ -285,7 +288,7 @@ services:
         - SPRING_PROFILES_ACTIVE=local
     container_name: ev-saas-station
     ports:
-      - "8084:8084"
+      - "8089:8084"
     depends_on:
       timescaledb:
         condition: service_healthy
