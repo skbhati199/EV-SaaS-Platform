@@ -35,6 +35,13 @@ public interface ChargingStationService {
     ChargingStationDto updateStationStatus(UUID id, StationStatus status);
     
     /**
+     * Gets a charging station entity by UUID
+     * @param id The station UUID
+     * @return The charging station entity
+     */
+    ChargingStation getStationByUUID(UUID id);
+    
+    /**
      * Registers a new charging station or updates an existing one based on its identifier.
      * This is used during OCPP WebSocket connection establishment.
      *

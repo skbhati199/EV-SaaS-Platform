@@ -5,5 +5,6 @@ public enum SessionStatus {
     COMPLETED,
     STOPPED,
     FAULTED,
-    EXPIRED
+    EXPIRED,
+    IN_PROGRESS
 } 

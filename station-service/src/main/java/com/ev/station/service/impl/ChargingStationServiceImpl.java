@@ -284,15 +284,19 @@ public class ChargingStationServiceImpl implements ChargingStationService {
     @Transactional
     public ChargingStationDto updateStationStatus(String stationId, StationStatus status) {
         ChargingStation station = stationRepository.findBySerialNumber(stationId)
-                .orElseThrow(() -> new EntityNotFoundException("Station not found with serial number: " + stationId));
+                .orElseThrow(() -> new EntityNotFoundException("Station not found with id: " + stationId));
         
         station.setStatus(status);
-        station = stationRepository.save(station);
+        station.setUpdatedAt(LocalDateTime.now());
         
-        // Log status change
-        log.info("Updated status for station {}: {} -> {}", stationId, station.getStatus(), status);
-        
-        return mapToDto(station);
+        ChargingStation updatedStation = stationRepository.save(station);
+        return mapToDto(updatedStation);
+    }
+    
+    @Override
+    public ChargingStation getStationByUUID(UUID id) {
+        return stationRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found with id: " + id));
     }
     
     private ChargingStationDto mapToDto(ChargingStation station) {

@@ -8,6 +8,7 @@ import com.ev.station.model.ChargingSession;
 import com.ev.station.model.Connector;
 import com.ev.station.model.EVSEStatus;
 import com.ev.station.model.SessionStatus;
+import com.ev.station.model.StationStatus;
 import com.ev.station.repository.ChargingSessionRepository;
 import com.ev.station.repository.ConnectorRepository;
 import com.ev.station.service.ChargingSessionService;
@@ -35,6 +36,13 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
     private final KafkaProducerService kafkaProducerService;
 
     @Override
+    public List<ChargingSessionDto> getAllSessions() {
+        return sessionRepository.findAll().stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
     public ChargingSessionDto getSessionById(UUID id) {
         ChargingSession session = sessionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Charging session not found: " + id));
@@ -42,10 +50,10 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
     }
 
     @Override
-    public List<ChargingSessionDto> getAllActiveSessions() {
-        return sessionRepository.findByStatus(SessionStatus.IN_PROGRESS).stream()
-                .map(this::mapToDto)
-                .toList();
+    public ChargingSessionDto getSessionByTransactionId(String transactionId) {
+        ChargingSession session = sessionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Charging session not found: " + transactionId));
+        return mapToDto(session);
     }
 
     @Override
@@ -63,9 +71,34 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
     }
 
     @Override
-    public Page<ChargingSessionDto> getSessionsByStationIdPaginated(UUID stationId, Pageable pageable) {
-        return sessionRepository.findByStationId(stationId, pageable)
-                .map(this::mapToDto);
+    public List<ChargingSessionDto> getSessionsByStationIdAndStatus(UUID stationId, SessionStatus status) {
+        return sessionRepository.findByStationIdAndStatus(stationId, status).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
+    public List<ChargingSessionDto> getSessionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return sessionRepository.findByStartTimestampBetween(startDate, endDate).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
+    public List<ChargingSessionDto> getSessionsByUserIdAndDateRange(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        return sessionRepository.findByUserIdAndStartTimestampBetween(userId, startDate, endDate).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
+    public ChargingSessionDto startChargingSession(UUID stationId, StartChargingSessionRequest request) {
+        return startSession(request);
+    }
+
+    @Override
+    public ChargingSessionDto stopChargingSession(UUID stationId, StopChargingSessionRequest request) {
+        return endSession(request.getSessionId(), request.getStopReason());
     }
 
     @Override
@@ -97,14 +130,14 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         // Create new session
         ChargingSession session = ChargingSession.builder()
                 .stationId(connector.getStationId())
-                .connectorId(connector.getId())
+                .connectorId(request.getConnectorId())
                 .userId(request.getUserId())
                 .idTag(request.getIdTag())
-                .startTime(LocalDateTime.now())
+                .startTimestamp(LocalDateTime.now())
+                .transactionId(UUID.randomUUID().toString())
                 .meterStart(request.getMeterStart())
-                .currentMeterValue(request.getMeterStart())
-                .energyDelivered(BigDecimal.ZERO)
                 .status(SessionStatus.IN_PROGRESS)
+                .startReason(request.getStartReason())
                 .build();
         
         // Update connector status
@@ -152,11 +185,17 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         
         // Update session
         session.setStatus(SessionStatus.COMPLETED);
-        session.setEndTime(LocalDateTime.now());
+        session.setStopTimestamp(LocalDateTime.now());
+        session.setStopReason(stopReason);
         
-        // Calculate energy delivered
-        BigDecimal energyDelivered = session.getCurrentMeterValue().subtract(session.getMeterStart());
-        session.setEnergyDelivered(energyDelivered);
+        // If meterStop is provided in the future, it should be set here
+        
+        // Calculate energy delivered if meter stop is available
+        if (session.getMeterStop() != null && session.getMeterStart() != null) {
+            BigDecimal totalEnergy = BigDecimal.valueOf(session.getMeterStop() - session.getMeterStart())
+                    .divide(BigDecimal.valueOf(1000)); // Convert Wh to kWh
+            session.setTotalEnergyKwh(totalEnergy);
+        }
         
         session = sessionRepository.save(session);
         
@@ -187,17 +226,17 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                 .userId(session.getUserId())
                 .idToken(session.getIdTag())
                 .sessionStatus(session.getStatus())
-                .startTime(session.getStartTime())
-                .endTime(session.getEndTime())
+                .startTime(session.getStartTimestamp())
+                .endTime(session.getStopTimestamp())
                 .timestamp(LocalDateTime.now())
-                .energyDeliveredKwh(session.getEnergyDelivered())
+                .energyDeliveredKwh(session.getTotalEnergyKwh())
                 .durationSeconds(
-                    session.getEndTime() != null 
-                        ? Duration.between(session.getStartTime(), session.getEndTime()).getSeconds() 
-                        : Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds()
+                    session.getStopTimestamp() != null 
+                        ? Duration.between(session.getStartTimestamp(), session.getStopTimestamp()).getSeconds() 
+                        : Duration.between(session.getStartTimestamp(), LocalDateTime.now()).getSeconds()
                 )
                 .meterStart(session.getMeterStart())
-                .meterValue(session.getCurrentMeterValue())
+                .meterStop(session.getMeterStop())
                 .stopReason(stopReason)
                 .build();
 
@@ -219,13 +258,17 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                 .connectorId(session.getConnectorId())
                 .userId(session.getUserId())
                 .idTag(session.getIdTag())
-                .startTime(session.getStartTime())
-                .endTime(session.getEndTime())
+                .startTime(session.getStartTimestamp())
+                .endTime(session.getStopTimestamp())
                 .meterStart(session.getMeterStart())
                 .meterStop(session.getMeterStop())
-                .currentMeterValue(session.getCurrentMeterValue())
-                .energyDelivered(session.getEnergyDelivered())
+                .energyDelivered(session.getTotalEnergyKwh())
                 .status(session.getStatus())
+                .startReason(session.getStartReason())
+                .stopReason(session.getStopReason())
+                .transactionId(session.getTransactionId())
+                .totalCost(session.getTotalCost())
+                .currency(session.getCurrency())
                 .build();
     }
 } 

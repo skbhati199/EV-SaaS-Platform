@@ -1,6 +1,9 @@
 package com.ev.station.ocpp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -76,5 +79,32 @@ public class OcppMessage {
                 .action(errorCode)
                 .payload(new Object[]{errorCode, errorDescription, errorDetails})
                 .build();
+    }
+    
+    /**
+     * Convert OcppMessage to JSON string
+     * @return JSON string representation of the message
+     */
+    public String toJson() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error converting OCPP message to JSON", e);
+        }
+    }
+    
+    /**
+     * Parse JSON node to OcppMessage using the provided ObjectMapper
+     * @param node JsonNode to parse
+     * @param mapper ObjectMapper to use for parsing
+     * @return parsed OcppMessage
+     */
+    public static OcppMessage fromJson(JsonNode node, ObjectMapper mapper) {
+        try {
+            return mapper.treeToValue(node, OcppMessage.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error parsing OCPP message from JSON", e);
+        }
     }
 } 

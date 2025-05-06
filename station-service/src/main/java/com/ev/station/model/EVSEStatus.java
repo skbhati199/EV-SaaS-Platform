@@ -6,6 +6,7 @@ package com.ev.station.model;
 public enum EVSEStatus {
     AVAILABLE,    // EVSE is available for charging
     OCCUPIED,     // EVSE is currently being used for charging
+    CHARGING,     // EVSE is actively charging a vehicle
     RESERVED,     // EVSE is reserved but not currently in use
     OFFLINE,      // EVSE is not connected to the network
     OUT_OF_ORDER, // EVSE is not operational due to a fault
