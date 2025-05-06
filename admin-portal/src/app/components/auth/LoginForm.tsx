@@ -1,99 +1,133 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 
-const LoginForm = () => {
+export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
-  const { login, verify2FA, isLoading, error, requires2FA, clearError } = useAuth();
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { login, verify2FA } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError('');
+    setIsLoading(true);
     
     try {
-      if (requires2FA) {
-        await verify2FA(twoFactorCode);
+      const result = await login(email, password);
+      
+      if (result.requiresTwoFactor) {
+        setShowTwoFactor(true);
       } else {
-        await login({ email, password });
+        router.push('/dashboard');
       }
-    } catch (err) {
-      console.error('Login error:', err);
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    
+    try {
+      await verify2FA(twoFactorCode);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Invalid verification code. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        {requires2FA ? 'Enter 2FA Code' : 'Login to Admin Portal'}
-      </h2>
+    <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">Login to Admin Portal</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
       
-      <form onSubmit={handleSubmit}>
-        {!requires2FA ? (
-          <>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          </>
-        ) : (
+      {!showTwoFactor ? (
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+          
           <div className="mb-6">
-            <label className="block text-gray-700 mb-2" htmlFor="twoFactorCode">
-              Authentication Code
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Logging in...' : 'Login'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={handleTwoFactorSubmit}>
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="twoFactorCode">
+              Two-Factor Authentication Code
             </label>
             <input
               id="twoFactorCode"
               type="text"
               value={twoFactorCode}
               onChange={(e) => setTwoFactorCode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               placeholder="Enter 6-digit code"
               required
             />
           </div>
-        )}
-        
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Processing...' : requires2FA ? 'Verify' : 'Login'}
-        </button>
-      </form>
+          
+          <div className="flex items-center justify-between">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Verifying...' : 'Verify'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
-};
-
-export default LoginForm;
+}

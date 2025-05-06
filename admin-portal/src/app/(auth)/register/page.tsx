@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authService, RoleType } from '@/app/services/authService';
+import { authService } from '@/app/services';
 import { useAuthStore } from '@/app/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -249,4 +249,4 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-} 
+}

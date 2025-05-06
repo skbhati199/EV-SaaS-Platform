@@ -1,89 +1,42 @@
 import axios from 'axios';
 
-// Types based on the Postman collection
-type RegisterUserRequest = {
-  username: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-};
-
-type LoginRequest = {
-  email: string;
-  password: string;
-};
-
-type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-};
-
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  active: boolean;
-  createdAt: string;
-};
-
-type TwoFactorSetupResponse = {
-  secret: string;
-  qrCodeImage: string;
-};
-
-type TwoFactorEnableRequest = {
-  secret: string;
-  code: string;
-};
+const API_BASE_URL = 'http://localhost:8080/api/v1/auth';
 
 class AuthService {
-  private baseUrl: string;
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:8080') {
-    this.baseUrl = baseUrl;
-    
+  constructor(private baseUrl: string = API_BASE_URL) {
     // Initialize tokens from localStorage if available
-    this.accessToken = localStorage.getItem('access_token');
-    this.refreshToken = localStorage.getItem('refresh_token');
-    
-    // Set up axios interceptor for automatic token refresh
-    this.setupInterceptors();
-  }
+    if (typeof window !== 'undefined') {
+      this.accessToken = localStorage.getItem('accessToken');
+      this.refreshToken = localStorage.getItem('refreshToken');
+    }
 
-  private setupInterceptors() {
+    // Set up axios interceptor for token refresh
     axios.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
         
-        // If the error is 401 and we have a refresh token and this is not a retry
-        if (
-          error.response?.status === 401 &&
-          this.refreshToken &&
-          !originalRequest._retry
-        ) {
+        // If error is 401 and not already retrying
+        if (error.response?.status === 401 && !originalRequest._retry && this.refreshToken) {
           originalRequest._retry = true;
           
           try {
             // Try to refresh the token
-            const newTokens = await this.refreshAccessToken();
+            const response = await axios.post(`${this.baseUrl}/refresh`, null, {
+              params: { refreshToken: this.refreshToken }
+            });
             
-            // Update the authorization header
-            originalRequest.headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
+            const { accessToken, refreshToken } = response.data;
+            this.setTokens(accessToken, refreshToken);
             
-            // Retry the original request
+            // Retry the original request with new token
+            originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
             return axios(originalRequest);
           } catch (refreshError) {
-            // If refresh fails, log out the user
+            // If refresh fails, logout
             this.logout();
             return Promise.reject(refreshError);
           }
@@ -94,229 +47,130 @@ class AuthService {
     );
   }
 
-  // Register a new user
-  async register(userData: RegisterUserRequest): Promise<User> {
-    try {
-      const response = await axios.post<User>(
-        `${this.baseUrl}/api/v1/auth/register`,
-        userData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        throw new Error('User with this email already exists');
-      }
-      throw new Error('Registration failed');
+  private setTokens(accessToken: string, refreshToken: string) {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
     }
   }
 
-  // Login with email and password
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
-    try {
-      const response = await axios.post<AuthResponse>(
-        `${this.baseUrl}/api/v1/auth/login`,
-        credentials,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      
-      // Store tokens
-      this.accessToken = response.data.accessToken;
-      this.refreshToken = response.data.refreshToken;
-      
-      // Save tokens to localStorage
-      localStorage.setItem('access_token', response.data.accessToken);
-      localStorage.setItem('refresh_token', response.data.refreshToken);
-      
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        throw new Error('Invalid credentials');
-      }
-      throw new Error('Login failed');
+  private clearTokens() {
+    this.accessToken = null;
+    this.refreshToken = null;
+    
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
     }
   }
 
-  // Refresh the access token using a refresh token
-  async refreshAccessToken(): Promise<AuthResponse> {
-    if (!this.refreshToken) {
-      throw new Error('No refresh token available');
+  private getAuthHeader() {
+    return this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {};
+  }
+
+  async register(userData: any) {
+    try {
+      const response = await axios.post(`${this.baseUrl}/register`, userData);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Registration failed');
+    }
+  }
+
+  async login(email: string, password: string) {
+    try {
+      const response = await axios.post(`${this.baseUrl}/login`, { email, password });
+      
+      // Check if 2FA is required
+      if (response.data.requiresTwoFactor) {
+        return {
+          requiresTwoFactor: true,
+          tempToken: response.data.tempToken
+        };
+      }
+      
+      const { accessToken, refreshToken, user } = response.data;
+      this.setTokens(accessToken, refreshToken);
+      
+      return {
+        requiresTwoFactor: false,
+        user
+      };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Login failed');
+    }
+  }
+
+  async verify2FA(tempToken: string, code: string) {
+    try {
+      const response = await axios.post(`${this.baseUrl}/2fa/verify`, { code }, {
+        headers: { Authorization: `Bearer ${tempToken}` }
+      });
+      
+      const { accessToken, refreshToken, user } = response.data;
+      this.setTokens(accessToken, refreshToken);
+      
+      return { user };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Verification failed');
+    }
+  }
+
+  async validateToken() {
+    if (!this.accessToken) {
+      return false;
     }
     
     try {
-      const response = await axios.post<AuthResponse>(
-        `${this.baseUrl}/api/v1/auth/refresh`,
-        null,
-        {
-          params: {
-            refreshToken: this.refreshToken,
-          },
-        }
-      );
-      
-      // Update tokens
-      this.accessToken = response.data.accessToken;
-      this.refreshToken = response.data.refreshToken;
-      
-      // Update localStorage
-      localStorage.setItem('access_token', response.data.accessToken);
-      localStorage.setItem('refresh_token', response.data.refreshToken);
-      
-      return response.data;
-    } catch (error) {
-      // Clear tokens on refresh failure
-      this.logout();
-      throw new Error('Token refresh failed');
-    }
-  }
-
-  // Validate if a token is valid
-  async validateToken(token: string = this.accessToken || ''): Promise<boolean> {
-    try {
-      const response = await axios.get<boolean>(
-        `${this.baseUrl}/api/v1/auth/validate`,
-        {
-          params: {
-            token,
-          },
-        }
-      );
-      return response.data;
+      const response = await axios.get(`${this.baseUrl}/validate`, {
+        params: { token: this.accessToken }
+      });
+      return response.data === true;
     } catch (error) {
       return false;
     }
   }
 
-  // Logout - clear tokens
-  logout(): void {
-    this.accessToken = null;
-    this.refreshToken = null;
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-  }
-
-  // Get the current access token
-  getAccessToken(): string | null {
-    return this.accessToken;
-  }
-
-  // Check if user is authenticated
-  isAuthenticated(): boolean {
-    return !!this.accessToken;
-  }
-
-  // Get authorization header for API requests
-  getAuthHeader(): Record<string, string> {
-    return this.accessToken
-      ? { Authorization: `Bearer ${this.accessToken}` }
-      : {};
-  }
-
-  // Setup 2FA for a user
-  async setup2FA(): Promise<TwoFactorSetupResponse> {
-    if (!this.accessToken) {
-      throw new Error('Authentication required');
-    }
-    
+  async setup2FA() {
     try {
-      const response = await axios.post<TwoFactorSetupResponse>(
-        `${this.baseUrl}/api/v1/auth/2fa/setup`,
-        null,
-        {
-          headers: {
-            ...this.getAuthHeader(),
-          },
-        }
-      );
+      const response = await axios.post(`${this.baseUrl}/2fa/setup`, null, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
-    } catch (error) {
-      throw new Error('Failed to set up 2FA');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to set up 2FA');
     }
   }
 
-  // Enable 2FA after verifying the code
-  async enable2FA(data: TwoFactorEnableRequest): Promise<boolean> {
-    if (!this.accessToken) {
-      throw new Error('Authentication required');
-    }
-    
+  async enable2FA(secret: string, code: string) {
     try {
-      const response = await axios.post<boolean>(
-        `${this.baseUrl}/api/v1/auth/2fa/enable`,
-        data,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...this.getAuthHeader(),
-          },
-        }
-      );
+      const response = await axios.post(`${this.baseUrl}/2fa/enable`, { secret, code }, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
-    } catch (error) {
-      throw new Error('Failed to enable 2FA');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to enable 2FA');
     }
   }
 
-  // Verify 2FA code during login
-  async verify2FA(code: string, tempToken: string): Promise<AuthResponse> {
+  async disable2FA() {
     try {
-      const response = await axios.post<AuthResponse>(
-        `${this.baseUrl}/api/v1/auth/2fa/verify`,
-        { code },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${tempToken}`,
-          },
-        }
-      );
-      
-      // Store tokens
-      this.accessToken = response.data.accessToken;
-      this.refreshToken = response.data.refreshToken;
-      
-      // Save tokens to localStorage
-      localStorage.setItem('access_token', response.data.accessToken);
-      localStorage.setItem('refresh_token', response.data.refreshToken);
-      
+      const response = await axios.post(`${this.baseUrl}/2fa/disable`, null, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
-    } catch (error) {
-      throw new Error('2FA verification failed');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to disable 2FA');
     }
   }
 
-  // Disable 2FA for a user
-  async disable2FA(): Promise<boolean> {
-    if (!this.accessToken) {
-      throw new Error('Authentication required');
-    }
-    
-    try {
-      const response = await axios.post<boolean>(
-        `${this.baseUrl}/api/v1/auth/2fa/disable`,
-        null,
-        {
-          headers: {
-            ...this.getAuthHeader(),
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw new Error('Failed to disable 2FA');
-    }
+  logout() {
+    this.clearTokens();
   }
 }
 
-// Create and export a singleton instance
-export const authService = new AuthService();
-
+const authService = new AuthService();
 export default authService;

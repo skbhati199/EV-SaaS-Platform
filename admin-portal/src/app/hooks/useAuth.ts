@@ -1,175 +1,162 @@
-import { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+'use client';
+
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import authService from '../services/authService';
 
-type LoginCredentials = {
-  email: string;
-  password: string;
-};
-
-type RegisterData = {
+interface User {
+  id: string;
   username: string;
   email: string;
-  password: string;
   firstName: string;
   lastName: string;
   role: string;
-};
+  twoFactorEnabled?: boolean;
+  active: boolean;
+  createdAt: string;
+}
 
-type TwoFactorSetup = {
-  secret: string;
-  qrCodeImage: string;
-};
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  tempTwoFactorToken: string | null;
+  login: (email: string, password: string) => Promise<{ requiresTwoFactor: boolean }>;
+  verify2FA: (code: string) => Promise<void>;
+  logout: () => void;
+  register: (userData: any) => Promise<void>;
+  setup2FA: () => Promise<{ qrCodeImage: string; secret: string }>;
+  enable2FA: (secret: string, code: string) => Promise<void>;
+  disable2FA: () => Promise<void>;
+}
 
-export const useAuth = () => {
-  const { user, isAuthenticated, isLoading, error, login: storeLogin, logout: storeLogout, clearError } = useAuthStore();
-  const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetup | null>(null);
-  const [tempToken, setTempToken] = useState<string | null>(null);
-  const [requires2FA, setRequires2FA] = useState(false);
-
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (authService.getAccessToken()) {
-        const isValid = await authService.validateToken();
-        if (!isValid) {
-          storeLogout();
+const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      tempTwoFactorToken: null,
+      
+      login: async (email, password) => {
+        try {
+          const response = await authService.login(email, password);
+          
+          if (response.requiresTwoFactor) {
+            set({ tempTwoFactorToken: response.tempToken });
+            return { requiresTwoFactor: true };
+          }
+          
+          set({ 
+            user: response.user, 
+            isAuthenticated: true,
+            isLoading: false,
+            tempTwoFactorToken: null
+          });
+          
+          return { requiresTwoFactor: false };
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      verify2FA: async (code) => {
+        try {
+          const tempToken = get().tempTwoFactorToken;
+          if (!tempToken) {
+            throw new Error('No temporary token found');
+          }
+          
+          const response = await authService.verify2FA(tempToken, code);
+          
+          set({ 
+            user: response.user, 
+            isAuthenticated: true,
+            isLoading: false,
+            tempTwoFactorToken: null
+          });
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      logout: () => {
+        authService.logout();
+        set({ user: null, isAuthenticated: false, tempTwoFactorToken: null });
+      },
+      
+      register: async (userData) => {
+        try {
+          await authService.register(userData);
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      setup2FA: async () => {
+        try {
+          return await authService.setup2FA();
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      enable2FA: async (secret, code) => {
+        try {
+          await authService.enable2FA(secret, code);
+          
+          // Update user object with 2FA enabled
+          const user = get().user;
+          if (user) {
+            set({ user: { ...user, twoFactorEnabled: true } });
+          }
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      disable2FA: async () => {
+        try {
+          await authService.disable2FA();
+          
+          // Update user object with 2FA disabled
+          const user = get().user;
+          if (user) {
+            set({ user: { ...user, twoFactorEnabled: false } });
+          }
+        } catch (error) {
+          throw error;
         }
       }
-    };
-    
-    checkAuth();
-  }, [storeLogout]);
-
-  // Register a new user
-  const register = async (userData: RegisterData) => {
-    try {
-      const result = await authService.register(userData);
-      return result;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('Registration failed');
+    }),
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({ 
+        user: state.user,
+        isAuthenticated: state.isAuthenticated
+      })
     }
-  };
+  )
+);
 
-  // Login with email and password
-  const login = async (credentials: LoginCredentials) => {
-    try {
-      const response = await authService.login(credentials);
-      
-      // If login is successful, update the store
-      // In a real app, you would fetch user profile here
-      const mockUser = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        email: credentials.email,
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'ADMIN',
-      };
-      
-      storeLogin(credentials.email, credentials.password);
-      return response;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('Login failed');
-    }
-  };
-
-  // Logout the user
-  const logout = () => {
-    authService.logout();
-    storeLogout();
-  };
-
-  // Setup 2FA
-  const setup2FA = async () => {
-    try {
-      const setup = await authService.setup2FA();
-      setTwoFactorSetup(setup);
-      return setup;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('Failed to set up 2FA');
-    }
-  };
-
-  // Enable 2FA
-  const enable2FA = async (secret: string, code: string) => {
-    try {
-      const result = await authService.enable2FA({ secret, code });
-      return result;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('Failed to enable 2FA');
-    }
-  };
-
-  // Verify 2FA code during login
-  const verify2FA = async (code: string) => {
-    if (!tempToken) {
-      throw new Error('No temporary token available');
-    }
-    
-    try {
-      const response = await authService.verify2FA(code, tempToken);
-      setRequires2FA(false);
-      setTempToken(null);
-      
-      // If verification is successful, update the store
-      // In a real app, you would fetch user profile here
-      const mockUser = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        email: 'admin@example.com',
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'ADMIN',
-      };
-      
-      storeLogin('admin@example.com', 'password');
-      return response;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('2FA verification failed');
-    }
-  };
-
-  // Disable 2FA
-  const disable2FA = async () => {
-    try {
-      const result = await authService.disable2FA();
-      return result;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('Failed to disable 2FA');
-    }
-  };
-
-  return {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    login,
-    logout,
-    register,
-    clearError,
-    setup2FA,
-    enable2FA,
-    verify2FA,
-    disable2FA,
-    twoFactorSetup,
-    requires2FA,
-  };
+// Hook for components to use
+export const useAuth = () => {
+  const auth = useAuthStore();
+  
+  // Initialize auth state on first load
+  if (auth.isLoading) {
+    authService.validateToken()
+      .then(isValid => {
+        if (!isValid) {
+          auth.logout();
+        }
+        useAuthStore.setState({ isLoading: false });
+      })
+      .catch(() => {
+        auth.logout();
+        useAuthStore.setState({ isLoading: false });
+      });
+  }
+  
+  return auth;
 };

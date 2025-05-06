@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 
-const RegisterForm = () => {
+export default function RegisterForm() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -13,8 +14,11 @@ const RegisterForm = () => {
     lastName: '',
     role: 'USER'
   });
-  const [successMessage, setSuccessMessage] = useState('');
-  const { register, isLoading, error, clearError } = useAuth();
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { register } = useAuth();
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -26,53 +30,48 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
-    setSuccessMessage('');
+    setError('');
     
-    // Validate passwords match
+    // Validate password match
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
     
+    setIsLoading(true);
+    
     try {
-      const { confirmPassword, ...registerData } = formData;
-      await register(registerData);
-      setSuccessMessage('Registration successful! You can now login.');
-      setFormData({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        firstName: '',
-        lastName: '',
-        role: 'USER'
+      await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: formData.role
       });
-    } catch (err) {
-      console.error('Registration error:', err);
+      
+      router.push('/login');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Create an Account</h2>
+    <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">Register Account</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
-        </div>
-      )}
-      
-      {successMessage && (
-        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
-          {successMessage}
         </div>
       )}
       
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-4">
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="firstName">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="firstName">
               First Name
             </label>
             <input
@@ -81,13 +80,13 @@ const RegisterForm = () => {
               type="text"
               value={formData.firstName}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
           
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="lastName">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lastName">
               Last Name
             </label>
             <input
@@ -96,14 +95,14 @@ const RegisterForm = () => {
               type="text"
               value={formData.lastName}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
         </div>
         
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="username">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
             Username
           </label>
           <input
@@ -112,13 +111,13 @@ const RegisterForm = () => {
             type="text"
             value={formData.username}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="email">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
             Email
           </label>
           <input
@@ -127,13 +126,13 @@ const RegisterForm = () => {
             type="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="password">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
             Password
           </label>
           <input
@@ -142,13 +141,13 @@ const RegisterForm = () => {
             type="password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="confirmPassword">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="confirmPassword">
             Confirm Password
           </label>
           <input
@@ -157,13 +156,13 @@ const RegisterForm = () => {
             type="password"
             value={formData.confirmPassword}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           />
         </div>
         
         <div className="mb-6">
-          <label className="block text-gray-700 mb-2" htmlFor="role">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="role">
             Role
           </label>
           <select
@@ -171,24 +170,24 @@ const RegisterForm = () => {
             name="role"
             value={formData.role}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             <option value="USER">User</option>
-            <option value="ADMIN">Admin</option>
             <option value="OPERATOR">Operator</option>
+            <option value="ADMIN">Admin</option>
           </select>
         </div>
         
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Processing...' : 'Register'}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Registering...' : 'Register'}
+          </button>
+        </div>
       </form>
     </div>
   );
-};
-
-export default RegisterForm;
+}
