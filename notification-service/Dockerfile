@@ -24,6 +24,9 @@ ARG SPRING_PROFILES_ACTIVE=docker
 ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 # Create a non-root user to run the application
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
@@ -39,7 +42,7 @@ ENV SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
 ENV JAVA_OPTS=""
 
 # Expose the application port
-EXPOSE 8080
+EXPOSE 8087
 
 # Run the application with specific JVM options for containerization
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar"] 

@@ -15,6 +15,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -261,7 +262,7 @@ public class KafkaConsumerService {
         templateData.put("lastName", user.getLastName());
         templateData.put("paymentId", event.getPaymentId());
         templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
-        templateData.put("paymentMethod", event.getPaymentMethodType());
+        templateData.put("paymentMethod", event.getPaymentMethod());
         templateData.put("paymentDate", event.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         
         NotificationEvent notificationEvent = NotificationEvent.builder()
@@ -426,8 +427,8 @@ public class KafkaConsumerService {
         templateData.put("lastName", user.getLastName());
         templateData.put("invoiceId", event.getInvoiceId());
         templateData.put("invoiceNumber", event.getInvoiceNumber());
-        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
-        templateData.put("dueDate", event.getDueDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        templateData.put("amount", formatAmount(event.getTotalAmount(), event.getCurrency()));
+        templateData.put("dueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
@@ -482,7 +483,7 @@ public class KafkaConsumerService {
         templateData.put("lastName", user.getLastName());
         templateData.put("invoiceId", event.getInvoiceId());
         templateData.put("invoiceNumber", event.getInvoiceNumber());
-        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("amount", formatAmount(event.getTotalAmount(), event.getCurrency()));
         templateData.put("paymentDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         
         NotificationEvent notificationEvent = NotificationEvent.builder()
@@ -538,9 +539,9 @@ public class KafkaConsumerService {
         templateData.put("lastName", user.getLastName());
         templateData.put("invoiceId", event.getInvoiceId());
         templateData.put("invoiceNumber", event.getInvoiceNumber());
-        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
-        templateData.put("dueDate", event.getDueDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        templateData.put("daysOverdue", calculateDaysOverdue(event.getDueDate()));
+        templateData.put("amount", formatAmount(event.getTotalAmount(), event.getCurrency()));
+        templateData.put("dueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        templateData.put("daysOverdue", calculateDaysOverdue(event.getDueAt()));
         
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
@@ -784,8 +785,8 @@ public class KafkaConsumerService {
      * @param currency The currency code
      * @return Formatted amount string
      */
-    private String formatAmount(Double amount, String currency) {
-        return String.format("%s %.2f", currency, amount);
+    private String formatAmount(BigDecimal amount, String currency) {
+        return String.format("%s %.2f", currency, amount.doubleValue());
     }
     
     /**

@@ -65,7 +65,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
       - SPRING_DATASOURCE_USERNAME=notification
       - SPRING_DATASOURCE_PASSWORD=notification
@@ -74,6 +74,13 @@ services:
       - NOTIFICATION_EMAIL_ENABLED=false
       - NOTIFICATION_SMS_ENABLED=false
       - NOTIFICATION_PUSH_ENABLED=false
+      - SERVER_PORT=8087
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   notification-postgres-data: 

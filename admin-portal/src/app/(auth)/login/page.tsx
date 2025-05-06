@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authService } from '@/app/services/authService';
+import authService from '@/app/services/authService';
 import { useAuthStore } from '@/app/store/authStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
@@ -24,26 +24,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // For development/demo, allow a mock login
-      if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === 'true') {
-        const success = await authService.mockLogin(email, password);
-        if (success) {
-          login({ 
-            id: 'mock-id',
-            email: email,
-            firstName: 'Admin',
-            lastName: 'User',
-            role: 'ADMIN',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-          router.push('/dashboard');
-          return;
-        } else {
-          throw new Error('Invalid credentials');
-        }
-      }
-
       // Real authentication using the auth service
       const response = await authService.login({ email, password });
       
