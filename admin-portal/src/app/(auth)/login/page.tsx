@@ -28,10 +28,10 @@ export default function LoginPage() {
       const response = await authService.login({ email, password });
       
       // Update auth context/store with user info
-      login(response.user);
-      
+      console.log(response);
+      // login(response);
       // Redirect based on user role
-      redirectBasedOnRole(response.user.role);
+      // redirectBasedOnRole(response.role);
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Invalid email or password');

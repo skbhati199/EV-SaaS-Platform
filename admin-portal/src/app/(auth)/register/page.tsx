@@ -13,12 +13,13 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    role: 'USER' as RoleType,
+    role: 'USER'
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +60,8 @@ export default function RegisterPage() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        username: formData.email.split('@')[0],
+        role: formData.role,
       });
       
       // Update auth context with user info
@@ -74,7 +77,7 @@ export default function RegisterPage() {
     }
   };
   
-  const redirectBasedOnRole = (role: RoleType) => {
+  const redirectBasedOnRole = (role: string) => {
     switch (role) {
       case 'ADMIN':
         router.push('/dashboard');
