@@ -23,7 +23,7 @@ alwaysApply: false
 - Secrets and keys must never be hard-coded.
 
 
-# must use Docker or docker compose use another machine in windows 11
+# Must use Docker or docker compose use another machine in windows 11
 -  ssh skbhati@192.168.29.133
 
 

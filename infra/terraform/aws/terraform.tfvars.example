@@ -1,0 +1,25 @@
+# AWS Configuration
+region = "us-east-1"
+cluster_name = "ev-saas-cluster"
+environment = "production"
+
+# Database Credentials (replace with secure values)
+db_username = "admin"
+db_password = "change-me-to-secure-password"
+
+# GitHub Configuration (replace with your values)
+github_owner = "your-github-username-or-org"
+github_token = "ghp_your_github_personal_access_token"
+
+# Service configuration
+service_list = [
+  "billing-service",
+  "auth-service",
+  "api-gateway",
+  "station-service", 
+  "user-service",
+  "notification-service",
+  "roaming-service",
+  "smart-charging",
+  "scheduler-service"
+] 

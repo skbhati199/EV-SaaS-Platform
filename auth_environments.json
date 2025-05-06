@@ -1,0 +1,73 @@
+{
+    "id": "8b6b6f5e-c3b8-4f8d-a57b-7f3ebb54b0f1",
+    "name": "EV SaaS Auth Service Environment",
+    "values": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "username",
+            "value": "testuser123",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "password",
+            "value": "Password123!",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "email",
+            "value": "testuser@example.com",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "totp_secret",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "keycloak_url",
+            "value": "http://localhost:8180/auth",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "realm",
+            "value": "ev-platform",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "client_id",
+            "value": "ev-app",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "client_secret",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        }
+    ],
+    "_postman_variable_scope": "environment"
+}

@@ -1,0 +1,430 @@
+{
+    "info": {
+        "name": "EV SaaS Billing Service API",
+        "description": "Collection for testing billing and payment endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Billing Plans",
+            "description": "Manage billing plans and pricing",
+            "item": [
+                {
+                    "name": "Create Billing Plan",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/plans",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "plans"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Premium Plan\",\n  \"description\": \"Full access to all charging stations\",\n  \"priceMonthly\": 19.99,\n  \"priceYearly\": 199.99,\n  \"features\": \"Fast charging, priority access\",\n  \"isActive\": true,\n  \"currency\": \"USD\",\n  \"energyRate\": 0.25,\n  \"timeRate\": 2.50\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Billing Plans",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/plans",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "plans"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Active Billing Plans",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/plans/active",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "plans",
+                                "active"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Subscriptions",
+            "description": "Manage user and organization subscriptions",
+            "item": [
+                {
+                    "name": "Create Subscription",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/subscriptions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "subscriptions"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"organizationId\": \"{{organization_id}}\",\n  \"planId\": \"{{plan_id}}\",\n  \"billingCycle\": \"MONTHLY\",\n  \"autoRenew\": true\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Subscriptions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/subscriptions/user/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "subscriptions",
+                                "user",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Cancel Subscription",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/subscriptions/{{subscription_id}}/cancel",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "subscriptions",
+                                "{{subscription_id}}",
+                                "cancel"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Invoices",
+            "description": "Manage billing invoices",
+            "item": [
+                {
+                    "name": "Get User Invoices",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/invoices/user/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "invoices",
+                                "user",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Payments",
+            "description": "Manage payments and transactions",
+            "item": [
+                {
+                    "name": "Create Payment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/payments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "payments"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"invoiceId\": \"{{invoice_id}}\",\n  \"amount\": 19.99,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"transactionId\": \"tx_12345678\"\n}"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Payment Methods",
+            "description": "Manage user payment methods",
+            "item": [
+                {
+                    "name": "Add Payment Method",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/payment-methods",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "payment-methods"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"type\": \"CREDIT_CARD\",\n  \"provider\": \"STRIPE\",\n  \"tokenId\": \"tok_visa\",\n  \"lastFour\": \"4242\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2025\",\n  \"isDefault\": true\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Payment Methods",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/payment-methods/user/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "payment-methods",
+                                "user",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Usage Records",
+            "description": "Track and manage usage records",
+            "item": [
+                {
+                    "name": "Record Usage",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/usage-records",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "usage-records"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"subscriptionId\": \"{{subscription_id}}\",\n  \"meterType\": \"ENERGY\",\n  \"quantity\": 10.5\n}"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Billing Settings",
+            "description": "Manage organization billing settings",
+            "item": [
+                {
+                    "name": "Get Organization Billing Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/settings/organization/{{organization_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "settings",
+                                "organization",
+                                "{{organization_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Billing Settings",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/billing/settings/{{settings_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "billing",
+                                "settings",
+                                "{{settings_id}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"organizationId\": \"{{organization_id}}\",\n  \"billingEmail\": \"billing@example.com\",\n  \"taxId\": \"123456789\",\n  \"billingAddress\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\",\n    \"country\": \"US\"\n  },\n  \"currency\": \"USD\"\n}"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

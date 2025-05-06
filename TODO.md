@@ -23,7 +23,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [x] Redis (cache, queue, sessions)
 - [x] Keycloak (SSO/OAuth2) integration
 - [ ] OCPP/OCPI protocol handling adapters completion
-- [x] Swagger/OpenAPI for API documentation
+- [ ] Swagger/OpenAPI for API documentation
 - [x] Prometheus and Grafana for monitoring and observability
 
 ### Frontend
@@ -33,7 +33,7 @@ Build a scalable and modular Electric Vehicle SaaS platform to manage EVSE infra
 - [ ] User Portal Implementation
 - [x] Real-time WebSocket clients
 - [x] Comprehensive UI Components
-- [x] Integration with all backend services
+- [ ] Integration with all backend services
 - [x] Admin Portal Integration with Grafana
 
 
