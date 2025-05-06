@@ -1,5 +1,6 @@
 package com.ev.notificationservice.service;
 
+import com.ev.notificationservice.dto.event.UserEvent;
 import java.util.UUID;
 
 /**
@@ -7,6 +8,13 @@ import java.util.UUID;
  * This serves as a client to the User Service microservice.
  */
 public interface UserService {
+    
+    /**
+     * Get user by ID
+     * @param userId User ID
+     * @return User event with basic user information
+     */
+    UserEvent getUserById(UUID userId);
     
     /**
      * Get user details by user ID

@@ -1,11 +1,13 @@
 package com.ev.notificationservice.service.impl;
 
+import com.ev.notificationservice.dto.event.UserEvent;
 import com.ev.notificationservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -23,6 +25,29 @@ public class UserServiceImpl implements UserService {
                            @Value("${services.user-service.url:http://user-service:8080}") String userServiceBaseUrl) {
         this.restTemplate = restTemplate;
         this.userServiceBaseUrl = userServiceBaseUrl;
+    }
+    
+    @Override
+    public UserEvent getUserById(UUID userId) {
+        log.info("Getting user by ID: {}", userId);
+        try {
+            // In a real implementation, this would call the user service API
+            // return restTemplate.getForObject(userServiceBaseUrl + "/api/v1/users/{id}", UserEvent.class, userId);
+            
+            // For now, return a stub response
+            return UserEvent.builder()
+                    .userId(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email(userId + "@example.com")
+                    .phoneNumber("+1234567890")
+                    .enabled(true)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error getting user by ID: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
     @Override
