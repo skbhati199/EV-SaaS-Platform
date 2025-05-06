@@ -1,0 +1,204 @@
+---
+# NGINX Gateway Fabric Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-gateway
+---
+# NGINX Gateway Class
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: nginx
+spec:
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+---
+# EV SaaS Gateway
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: ev-saas-gateway
+  namespace: ev-saas
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+  - name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: ev-saas-tls
+        namespace: ev-saas
+---
+# NGINX Gateway Fabric Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-gateway
+  template:
+    metadata:
+      labels:
+        app: nginx-gateway
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+      - name: nginx-gateway
+        image: ghcr.io/nginxinc/nginx-gateway-fabric:latest
+        args:
+        - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
+        ports:
+        - containerPort: 9113
+          name: metrics
+---
+# Service routes for microservices
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: auth-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /auth
+    backendRefs:
+    - name: auth-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: billing-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /billing
+    backendRefs:
+    - name: billing-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: station-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /stations
+    backendRefs:
+    - name: station-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: user-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /users
+    backendRefs:
+    - name: user-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: notification-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /notifications
+    backendRefs:
+    - name: notification-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: roaming-service-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /roaming
+    backendRefs:
+    - name: roaming-service
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: smart-charging-route
+  namespace: ev-saas
+spec:
+  parentRefs:
+  - name: ev-saas-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /smart-charging
+    backendRefs:
+    - name: smart-charging-service
+      port: 8080
+---
+# Gateway Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  - port: 443
+    targetPort: 443
+    name: https
+  selector:
+    app: nginx-gateway
+  type: LoadBalancer

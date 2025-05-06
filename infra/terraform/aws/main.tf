@@ -2,6 +2,25 @@ provider "aws" {
   region = var.region
 }
 
+# Include GitHub registry configuration
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 3.73.0, < 4.0.0"
+    }
+    github = {
+      source  = "integrations/github"
+      version = "~> 5.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
+  }
+}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
@@ -19,8 +38,8 @@ module "vpc" {
 
   tags = {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    Environment = var.environment
-    Project     = "ev-saas"
+    Environment                                 = var.environment
+    Project                                     = "ev-saas"
   }
 
   public_subnet_tags = {
@@ -32,6 +51,32 @@ module "vpc" {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"           = "1"
   }
+}
+
+# Create IAM policy for EKS to pull from GitHub Container Registry
+resource "aws_iam_policy" "github_container_registry_access" {
+  name        = "EKS-GitHub-Container-Registry-Access"
+  description = "Policy to allow EKS to pull images from GitHub Container Registry"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:GetAuthorizationToken"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 module "eks" {
@@ -55,6 +100,11 @@ module "eks" {
 
       instance_types = ["t3.medium"]
       capacity_type  = "ON_DEMAND"
+
+      # Attach the GitHub Container Registry access policy to the node group
+      iam_role_additional_policies = {
+        github_container_registry_access = aws_iam_policy.github_container_registry_access.arn
+      }
 
       tags = {
         Environment = var.environment
@@ -89,6 +139,34 @@ module "eks" {
   }
 }
 
+# Create Kubernetes Secret for GitHub Container Registry credentials using null_resource
+resource "null_resource" "github_registry_credentials" {
+  depends_on = [module.eks]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Update kubeconfig to interact with the EKS cluster
+      aws eks update-kubeconfig --region ${var.region} --name ${var.cluster_name}
+      
+      # Create Kubernetes secret with GitHub credentials
+      kubectl create namespace ev-saas || true
+      
+      # Create a secret for GitHub container registry access
+      kubectl create secret docker-registry github-registry-secret \
+        --namespace=ev-saas \
+        --docker-server=ghcr.io \
+        --docker-username=${var.github_owner} \
+        --docker-password=${var.github_token} \
+        --docker-email=null || true
+        
+      # Add annotation to use this secret for pulling images
+      kubectl patch serviceaccount default \
+        --namespace=ev-saas \
+        -p '{"imagePullSecrets": [{"name": "github-registry-secret"}]}' || true
+    EOT
+  }
+}
+
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 3.0"
@@ -104,7 +182,7 @@ module "rds" {
   allocated_storage     = 20
   max_allocated_storage = 100
 
-  db_name  = "evsaas_db"
+  name     = "evsaas_db"
   username = var.db_username
   password = var.db_password
   port     = 5432
@@ -150,24 +228,28 @@ resource "aws_security_group" "rds" {
   }
 }
 
-module "elasticache" {
-  source  = "terraform-aws-modules/elasticache/aws"
-  version = "~> 2.0"
+# Create a simple Redis instance directly with AWS resources instead of using the module
+# that has version compatibility issues
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "ev-saas-cache-subnet"
+  subnet_ids = module.vpc.private_subnets
+}
 
-  name        = "ev-saas-redis"
-  description = "Redis cluster for EV SaaS"
+resource "aws_elasticache_cluster" "redis" {
+  cluster_id           = "ev-saas-redis"
+  engine               = "redis"
+  engine_version       = "6.x"
+  node_type            = "cache.t3.small"
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis6.x"
+  port                 = 6379
 
-  engine         = "redis"
-  engine_version = "6.x"
-  port           = 6379
+  subnet_group_name  = aws_elasticache_subnet_group.redis.name
+  security_group_ids = [aws_security_group.redis.id]
 
-  cluster_size        = 1
-  apply_immediately   = true
-  availability_zones  = ["${var.region}a", "${var.region}b", "${var.region}c"]
-  subnet_ids          = module.vpc.private_subnets
-  security_group_ids  = [aws_security_group.redis.id]
-  maintenance_window  = "mon:03:00-mon:04:00"
-  
+  maintenance_window = "mon:03:00-mon:04:00"
+  apply_immediately  = true
+
   tags = {
     Environment = var.environment
     Project     = "ev-saas"
@@ -198,4 +280,25 @@ resource "aws_security_group" "redis" {
     Environment = var.environment
     Project     = "ev-saas"
   }
-} 
+}
+
+# Output the endpoint details
+output "eks_cluster_endpoint" {
+  description = "Endpoint for EKS control plane"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_name" {
+  description = "The name of the EKS cluster"
+  value       = module.eks.cluster_name
+}
+
+output "rds_endpoint" {
+  description = "The RDS instance endpoint"
+  value       = module.rds.db_instance_address
+}
+
+output "redis_endpoint" {
+  description = "The Redis endpoint"
+  value       = aws_elasticache_cluster.redis.cache_nodes[0].address
+}

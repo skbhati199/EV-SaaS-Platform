@@ -1,21 +1,11 @@
-terraform {
-  required_providers {
-    github = {
-      source  = "integrations/github"
-      version = "~> 5.0"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
-    }
-  }
-}
-
 # Configure the GitHub Provider
 provider "github" {
   token = var.github_token
   owner = var.github_owner
 }
+
+# Add null provider for use with null_resource
+provider "null" {}
 
 # Create GitHub Container Registry Package
 resource "github_repository" "ev_saas_repo" {
@@ -61,11 +51,11 @@ resource "null_resource" "build_push_services" {
   for_each = toset(var.service_list)
 
   triggers = {
-    # Using path interpolation to reference the Dockerfile and source code of each service
+    # Using path interpolation to reference the Dockerfile
     dockerfile_hash = fileexists("${path.module}/../../../${each.value}/Dockerfile") ? filemd5("${path.module}/../../../${each.value}/Dockerfile") : timestamp()
-    # Calculate hash of source files (if available) or use timestamp if not available
-    source_hash = fileexists("${path.module}/../../../${each.value}/src") ? sha256(join("", [for f in fileset("${path.module}/../../../${each.value}/src", "**/*.java") : filesha256("${path.module}/../../../${each.value}/src/${f}")])) : timestamp()
-    # Trigger rebuild on git commit or on deploy
+
+    # Use timestamp as a trigger to ensure rebuild when needed
+    # We're not using source file hashing because of the directory existence issues
     timestamp = timestamp()
   }
 

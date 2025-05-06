@@ -49,6 +49,15 @@ build/
 *.iws
 *.ipr
 
+# === Terraform ===
+.terraform/
+*.tfvars
+*.tfvars.json
+*.tfvars.json.json
+*.tfvars.json.json.json
+*.tfvars.json.json.json.json
+*.tfvars.json.json.json.json.json
+
 # === OS / System ===
 Thumbs.db
 .DS_Store
