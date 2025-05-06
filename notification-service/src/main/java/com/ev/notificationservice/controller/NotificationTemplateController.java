@@ -1,6 +1,7 @@
 package com.ev.notificationservice.controller;
 
 import com.ev.notificationservice.dto.NotificationDTO;
+import com.ev.notificationservice.model.NotificationType;
 import com.ev.notificationservice.service.EventNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,7 +42,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("VERIFICATION")
+                .type(NotificationType.USER_ACCOUNT_VERIFICATION)
                 .channel("email")
                 .sent(true)
                 .build();
@@ -70,7 +71,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("WELCOME")
+                .type(NotificationType.USER_WELCOME)
                 .channel("email")
                 .sent(true)
                 .build();
@@ -101,7 +102,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("PASSWORD_RESET")
+                .type(NotificationType.USER_PASSWORD_RESET)
                 .channel("email")
                 .sent(true)
                 .build();
@@ -134,7 +135,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("SESSION_STARTED")
+                .type(NotificationType.CHARGING_STARTED)
                 .channel("email")
                 .sent(true)
                 .build();
@@ -171,7 +172,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("SESSION_COMPLETED")
+                .type(NotificationType.CHARGING_COMPLETED)
                 .channel("email")
                 .sent(true)
                 .build();
@@ -206,7 +207,7 @@ public class NotificationTemplateController {
                 .userId(userId)
                 .subject(subject)
                 .recipient(email)
-                .type("INVOICE")
+                .type(NotificationType.INVOICE_CREATED)
                 .channel("email")
                 .sent(true)
                 .build();

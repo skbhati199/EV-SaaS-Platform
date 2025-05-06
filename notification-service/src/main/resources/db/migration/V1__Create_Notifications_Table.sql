@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     sent_at TIMESTAMP,
     read_at TIMESTAMP,
     related_entity_id UUID,
-    related_entity_type VARCHAR(100)
+    related_entity_type VARCHAR(100),
+    priority VARCHAR(20) DEFAULT 'MEDIUM'
 );
 
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);

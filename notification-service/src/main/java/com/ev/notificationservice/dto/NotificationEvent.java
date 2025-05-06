@@ -1,5 +1,6 @@
 package com.ev.notificationservice.dto;
 
+import com.ev.notificationservice.model.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +18,7 @@ public class NotificationEvent {
     
     private UUID id;
     private UUID userId;
-    private String type; // USER_VERIFICATION, PAYMENT_CONFIRMATION, CHARGING_STARTED, etc.
+    private NotificationType type;
     private String subject;
     private String content;
     private String channel; // email, sms, push, in-app
@@ -27,17 +28,19 @@ public class NotificationEvent {
     private LocalDateTime timestamp;
     private UUID relatedEntityId; // e.g., charging session ID, invoice ID
     private String relatedEntityType; // e.g., ChargingSession, Invoice
+    private NotificationType.Priority priority;
     
     // Factory methods for different notification types
     public static NotificationEvent createEmailEvent(UUID userId, String recipient, String subject, String content) {
         return NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
-                .type("EMAIL")
+                .type(NotificationType.USER_WELCOME)
                 .subject(subject)
                 .content(content)
                 .channel("email")
                 .recipient(recipient)
+                .priority(NotificationType.Priority.MEDIUM)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
@@ -47,12 +50,13 @@ public class NotificationEvent {
         return NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
-                .type("EMAIL_TEMPLATE")
+                .type(NotificationType.USER_WELCOME)
                 .subject(subject)
                 .channel("email")
                 .recipient(recipient)
                 .templateId(templateId)
                 .templateData(templateData)
+                .priority(NotificationType.Priority.MEDIUM)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
@@ -61,10 +65,11 @@ public class NotificationEvent {
         return NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
-                .type("SMS")
+                .type(NotificationType.USER_WELCOME)
                 .content(content)
                 .channel("sms")
                 .recipient(recipient)
+                .priority(NotificationType.Priority.MEDIUM)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
@@ -73,11 +78,12 @@ public class NotificationEvent {
         return NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
-                .type("PUSH")
+                .type(NotificationType.USER_WELCOME)
                 .subject(subject)
                 .content(content)
                 .channel("push")
                 .recipient(recipient)
+                .priority(NotificationType.Priority.MEDIUM)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

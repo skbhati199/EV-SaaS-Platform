@@ -22,8 +22,9 @@ public class Notification {
     @Column(nullable = false)
     private UUID userId;
     
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String type;
+    private NotificationType type;
     
     @Column(nullable = false)
     private String subject;
@@ -50,6 +51,9 @@ public class Notification {
     
     private String relatedEntityType; // Type of the related entity (Invoice, Payment, etc.)
     
+    @Enumerated(EnumType.STRING)
+    private NotificationType.Priority priority;
+    
     @PrePersist
     public void prePersist() {
         if (id == null) {
@@ -57,6 +61,9 @@ public class Notification {
         }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (priority == null) {
+            priority = NotificationType.Priority.MEDIUM;
         }
     }
 } 

@@ -1,5 +1,6 @@
 package com.ev.notificationservice.dto;
 
+import com.ev.notificationservice.model.NotificationType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -21,8 +22,8 @@ public class NotificationDTO {
     @NotNull(message = "User ID is required")
     private UUID userId;
     
-    @NotBlank(message = "Notification type is required")
-    private String type;
+    @NotNull(message = "Notification type is required")
+    private NotificationType type;
     
     @NotBlank(message = "Subject is required")
     private String subject;
@@ -48,4 +49,6 @@ public class NotificationDTO {
     private UUID relatedEntityId;
     
     private String relatedEntityType;
+    
+    private NotificationType.Priority priority;
 } 

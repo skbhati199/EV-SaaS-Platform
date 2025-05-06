@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EV SaaS Platform Admin Portal
 
-## Getting Started
+## Authentication Integration
 
-First, run the development server:
+This project integrates the EV SaaS Auth Service API into the admin portal, providing a complete authentication and authorization system.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Features Implemented
+
+- **User Authentication**
+  - Login with email and password
+  - User registration
+  - Token-based authentication with JWT
+  - Automatic token refresh
+  - Logout functionality
+
+- **Two-Factor Authentication (2FA)**
+  - 2FA setup with QR code generation
+  - 2FA verification during login
+  - Enable/disable 2FA functionality
+
+- **Authorization**
+  - Role-based access control
+  - Protected routes based on authentication status
+  - Role-specific route protection
+
+### Project Structure
+
+```
+src/app/
+├── components/auth/
+│   ├── LoginForm.tsx         # Login form component
+│   ├── RegisterForm.tsx      # Registration form component
+│   ├── TwoFactorSetup.tsx    # 2FA setup and verification component
+│   └── ProtectedRoute.tsx    # Route protection component
+├── hooks/
+│   └── useAuth.ts            # Custom hook for auth functionality
+├── services/
+│   └── authService.ts        # Service for API communication
+├── store/
+│   └── authStore.ts          # Zustand store for auth state management
+├── login/
+│   └── page.tsx              # Login/Register page
+└── profile/
+    └── page.tsx              # User profile page with 2FA setup
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Authentication Flow
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Registration**:
+   - User submits registration form
+   - API creates a new user account
+   - User is redirected to login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Login**:
+   - User submits login credentials
+   - API validates credentials and returns tokens
+   - Tokens are stored in localStorage
+   - User is authenticated in the application
 
-## Learn More
+3. **Token Refresh**:
+   - Automatic refresh of access tokens using refresh tokens
+   - Axios interceptor handles 401 errors and refreshes tokens
 
-To learn more about Next.js, take a look at the following resources:
+4. **Two-Factor Authentication**:
+   - User sets up 2FA in profile page
+   - QR code is scanned with authenticator app
+   - User verifies setup with a code from the app
+   - Subsequent logins require 2FA code verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### API Integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The admin portal integrates with the following Auth Service API endpoints:
 
-## Deploy on Vercel
+- `POST /api/v1/auth/register` - Register a new user
+- `POST /api/v1/auth/login` - Login with credentials
+- `POST /api/v1/auth/refresh` - Refresh access token
+- `GET /api/v1/auth/validate` - Validate token
+- `POST /api/v1/auth/2fa/setup` - Set up 2FA
+- `POST /api/v1/auth/2fa/enable` - Enable 2FA
+- `POST /api/v1/auth/2fa/verify` - Verify 2FA code
+- `POST /api/v1/auth/2fa/disable` - Disable 2FA
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Usage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### Protected Routes
+
+Wrap any component or page that requires authentication with the `ProtectedRoute` component:
+
+```tsx
+<ProtectedRoute>
+  <YourSecurePage />
+</ProtectedRoute>
+```
+
+For role-specific protection:
+
+```tsx
+<ProtectedRoute requiredRole="ADMIN">
+  <AdminOnlyPage />
+</ProtectedRoute>
+```
+
+#### Authentication Hook
+
+Use the `useAuth` hook in your components to access authentication functionality:
+
+```tsx
+const { 
+  user, 
+  isAuthenticated, 
+  login, 
+  logout, 
+  register,
+  setup2FA,
+  enable2FA 
+} = useAuth();
+```
+
+### Configuration
+
+The authentication service is configured to use `http://localhost:8080` as the default API base URL. To change this, modify the `baseUrl` parameter in the `authService.ts` file.
+
+```typescript
+// In src/app/services/authService.ts
+const authService = new AuthService('https://your-api-url.com');
+```
+
+### Security Considerations
+
+- Access tokens are short-lived (1 hour by default)
+- Refresh tokens are used for obtaining new access tokens
+- Two-factor authentication adds an extra layer of security
+- Protected routes prevent unauthorized access to sensitive pages
+- Token validation occurs on application startup
+- Automatic logout on token expiration

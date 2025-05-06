@@ -247,52 +247,55 @@ public class KafkaConsumerService {
      * Handle payment completed event
      */
     private void handlePaymentCompletedEvent(PaymentEvent event) {
-        log.info("Handling payment completed event for payment: {}", event.getPaymentId());
+        log.info("Processing payment completed event for payment: {}", event.getPaymentId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("paymentAmount", event.getAmount().toString());
-            templateData.put("paymentCurrency", event.getCurrency());
-            templateData.put("paymentMethod", event.getPaymentMethod());
-            templateData.put("paymentDate", event.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-            templateData.put("invoiceNumber", "INV-" + event.getInvoiceId().toString().substring(0, 8).toUpperCase());
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for payment event: {}", event.getPaymentId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("paymentId", event.getPaymentId());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("paymentMethod", event.getPaymentMethodType());
+        templateData.put("paymentDate", event.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.PAYMENT_RECEIVED.name())
-                .subject("Payment Confirmation")
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("payment-confirmation-template")
+                .type(NotificationType.PAYMENT_RECEIVED)
+                .channel("email")
+                .recipient(user.getEmail())
+                .subject("Payment Received")
+                .templateId("payment-received")
                 .templateData(templateData)
-                .relatedEntityId(event.getPaymentId().toString())
-                .relatedEntityType("PAYMENT")
+                .priority(NotificationType.Priority.HIGH)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "Payment Received", 
+                null,
+                "payment-received", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Payment confirmation email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending payment confirmation notification", e);
+            log.info("Payment received email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send payment received email to user: {}", user.getEmail());
         }
     }
     
@@ -300,51 +303,54 @@ public class KafkaConsumerService {
      * Handle payment failed event
      */
     private void handlePaymentFailedEvent(PaymentEvent event) {
-        log.info("Handling payment failed event for payment: {}", event.getPaymentId());
+        log.info("Processing payment failed event for payment: {}", event.getPaymentId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("paymentAmount", event.getAmount().toString());
-            templateData.put("paymentCurrency", event.getCurrency());
-            templateData.put("paymentMethod", event.getPaymentMethod());
-            templateData.put("errorMessage", event.getErrorMessage());
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for payment event: {}", event.getPaymentId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("paymentId", event.getPaymentId());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("failureReason", event.getErrorMessage());
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.PAYMENT_FAILED.name())
+                .type(NotificationType.PAYMENT_FAILED)
+                .channel("email")
+                .recipient(user.getEmail())
                 .subject("Payment Failed")
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("payment-failed-template")
+                .templateId("payment-failed")
                 .templateData(templateData)
-                .relatedEntityId(event.getPaymentId().toString())
-                .relatedEntityType("PAYMENT")
+                .priority(NotificationType.Priority.HIGH)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "Payment Failed", 
+                null,
+                "payment-failed", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Payment failed email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending payment failed notification", e);
+            log.info("Payment failed email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send payment failed email to user: {}", user.getEmail());
         }
     }
     
@@ -352,50 +358,53 @@ public class KafkaConsumerService {
      * Handle payment refunded event
      */
     private void handlePaymentRefundedEvent(PaymentEvent event) {
-        log.info("Handling payment refunded event for payment: {}", event.getPaymentId());
+        log.info("Processing payment refunded event for payment: {}", event.getPaymentId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("refundAmount", event.getAmount().toString());
-            templateData.put("refundCurrency", event.getCurrency());
-            templateData.put("refundDate", event.getUpdatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for payment event: {}", event.getPaymentId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("paymentId", event.getPaymentId());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.PAYMENT_REFUNDED.name())
+                .type(NotificationType.PAYMENT_REFUNDED)
+                .channel("email")
+                .recipient(user.getEmail())
                 .subject("Payment Refunded")
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("payment-refunded-template")
+                .templateId("payment-refunded")
                 .templateData(templateData)
-                .relatedEntityId(event.getPaymentId().toString())
-                .relatedEntityType("PAYMENT")
+                .priority(NotificationType.Priority.HIGH)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "Payment Refunded", 
+                null,
+                "payment-refunded", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Payment refund email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending payment refund notification", e);
+            log.info("Payment refunded email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send payment refunded email to user: {}", user.getEmail());
         }
     }
     
@@ -403,53 +412,55 @@ public class KafkaConsumerService {
      * Handle invoice created event
      */
     private void handleInvoiceCreatedEvent(InvoiceEvent event) {
-        log.info("Handling invoice created event for invoice: {}", event.getInvoiceId());
+        log.info("Processing invoice created event for invoice: {}", event.getInvoiceId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("invoiceNumber", event.getInvoiceNumber());
-            templateData.put("invoiceAmount", event.getTotalAmount().toString());
-            templateData.put("invoiceCurrency", event.getCurrency());
-            templateData.put("invoiceDate", event.getIssuedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            templateData.put("invoiceDueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            templateData.put("invoiceUrl", event.getInvoiceUrl());
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for invoice event: {}", event.getInvoiceId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("invoiceId", event.getInvoiceId());
+        templateData.put("invoiceNumber", event.getInvoiceNumber());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("dueDate", event.getDueDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.INVOICE_CREATED.name())
-                .subject("New Invoice Available: " + event.getInvoiceNumber())
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("invoice-created-template")
+                .type(NotificationType.INVOICE_CREATED)
+                .channel("email")
+                .recipient(user.getEmail())
+                .subject("New Invoice Created: #" + event.getInvoiceNumber())
+                .templateId("invoice-created")
                 .templateData(templateData)
-                .relatedEntityId(event.getInvoiceId().toString())
-                .relatedEntityType("INVOICE")
+                .priority(NotificationType.Priority.MEDIUM)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "New Invoice Created: #" + event.getInvoiceNumber(), 
+                null,
+                "invoice-created", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Invoice created email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending invoice created notification", e);
+            log.info("Invoice created email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send invoice created email to user: {}", user.getEmail());
         }
     }
     
@@ -457,52 +468,55 @@ public class KafkaConsumerService {
      * Handle invoice paid event
      */
     private void handleInvoicePaidEvent(InvoiceEvent event) {
-        log.info("Handling invoice paid event for invoice: {}", event.getInvoiceId());
+        log.info("Processing invoice paid event for invoice: {}", event.getInvoiceId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("invoiceNumber", event.getInvoiceNumber());
-            templateData.put("invoiceAmount", event.getTotalAmount().toString());
-            templateData.put("invoiceCurrency", event.getCurrency());
-            templateData.put("paymentDate", event.getPaidAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-            templateData.put("invoiceUrl", event.getInvoiceUrl());
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for invoice event: {}", event.getInvoiceId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("invoiceId", event.getInvoiceId());
+        templateData.put("invoiceNumber", event.getInvoiceNumber());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("paymentDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.INVOICE_PAID.name())
-                .subject("Invoice Paid: " + event.getInvoiceNumber())
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("invoice-paid-template")
+                .type(NotificationType.INVOICE_PAID)
+                .channel("email")
+                .recipient(user.getEmail())
+                .subject("Invoice Paid: #" + event.getInvoiceNumber())
+                .templateId("invoice-paid")
                 .templateData(templateData)
-                .relatedEntityId(event.getInvoiceId().toString())
-                .relatedEntityType("INVOICE")
+                .priority(NotificationType.Priority.MEDIUM)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "Invoice Paid: #" + event.getInvoiceNumber(), 
+                null,
+                "invoice-paid", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Invoice paid email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending invoice paid notification", e);
+            log.info("Invoice paid email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send invoice paid email to user: {}", user.getEmail());
         }
     }
     
@@ -510,53 +524,56 @@ public class KafkaConsumerService {
      * Handle invoice overdue event
      */
     private void handleInvoiceOverdueEvent(InvoiceEvent event) {
-        log.info("Handling invoice overdue event for invoice: {}", event.getInvoiceId());
+        log.info("Processing invoice overdue event for invoice: {}", event.getInvoiceId());
         
-        try {
-            // Get user contact information
-            var user = userService.getUserById(event.getUserId());
-            String email = user.getEmail();
-            
-            // Create email template data
-            Map<String, Object> templateData = new HashMap<>();
-            templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-            templateData.put("invoiceNumber", event.getInvoiceNumber());
-            templateData.put("invoiceAmount", event.getTotalAmount().toString());
-            templateData.put("invoiceCurrency", event.getCurrency());
-            templateData.put("invoiceDueDate", event.getDueAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            templateData.put("daysPastDue", LocalDateTime.now().toLocalDate().toEpochDay() - event.getDueAt().toLocalDate().toEpochDay());
-            templateData.put("invoiceUrl", event.getInvoiceUrl());
-            
-            // Send email notification
-            NotificationEvent emailEvent = NotificationEvent.builder()
+        // Get user details
+        UserEvent user = userService.getUserById(event.getUserId());
+        if (user == null) {
+            log.error("User not found for invoice event: {}", event.getInvoiceId());
+            return;
+        }
+        
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("firstName", user.getFirstName());
+        templateData.put("lastName", user.getLastName());
+        templateData.put("invoiceId", event.getInvoiceId());
+        templateData.put("invoiceNumber", event.getInvoiceNumber());
+        templateData.put("amount", formatAmount(event.getAmount(), event.getCurrency()));
+        templateData.put("dueDate", event.getDueDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        templateData.put("daysOverdue", calculateDaysOverdue(event.getDueDate()));
+        
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .id(UUID.randomUUID())
                 .userId(event.getUserId())
-                .type(NotificationType.INVOICE_OVERDUE.name())
-                .subject("OVERDUE: Invoice " + event.getInvoiceNumber())
-                .recipient(email)
-                .channel("EMAIL")
-                .templateId("invoice-overdue-template")
+                .type(NotificationType.INVOICE_OVERDUE)
+                .channel("email")
+                .recipient(user.getEmail())
+                .subject("Overdue Invoice: #" + event.getInvoiceNumber())
+                .templateId("invoice-overdue")
                 .templateData(templateData)
-                .relatedEntityId(event.getInvoiceId().toString())
-                .relatedEntityType("INVOICE")
+                .priority(NotificationType.Priority.HIGH)
+                .timestamp(LocalDateTime.now())
                 .build();
-            
-            emailService.sendEmail(
-                email, 
-                emailEvent.getSubject(), 
-                null, 
-                emailEvent.getTemplateId(), 
-                emailEvent.getTemplateData()
-            );
-            
-            // Save notification record
-            Notification notification = createNotificationFromEvent(emailEvent);
+        
+        Notification notification = createNotificationFromEvent(notificationEvent);
+        notification.setSent(false);
+        
+        notification = notificationRepository.save(notification);
+        
+        boolean success = emailService.sendEmail(
+                user.getEmail(), 
+                "Overdue Invoice: #" + event.getInvoiceNumber(), 
+                null,
+                "invoice-overdue", 
+                templateData);
+        
+        if (success) {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            
-            log.info("Invoice overdue email sent to: {}", email);
-        } catch (Exception e) {
-            log.error("Error sending invoice overdue notification", e);
+            log.info("Invoice overdue email sent to user: {}", user.getEmail());
+        } else {
+            log.error("Failed to send invoice overdue email to user: {}", user.getEmail());
         }
     }
     
@@ -574,18 +591,18 @@ public class KafkaConsumerService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(event.getUserId())
+                .type(NotificationType.USER_CREATED)
                 .channel("email")
                 .recipient(event.getEmail())
                 .subject("Welcome to EV SaaS Platform")
                 .templateId("welcome-email")
                 .templateData(templateData)
                 .priority(NotificationType.Priority.HIGH)
-                .createdAt(LocalDateTime.now())
+                .timestamp(LocalDateTime.now())
                 .build();
         
         Notification notification = createNotificationFromEvent(notificationEvent);
         notification.setSent(false);
-        notification.setNotificationType(NotificationType.USER_CREATED);
         
         notification = notificationRepository.save(notification);
         
@@ -620,18 +637,18 @@ public class KafkaConsumerService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(event.getUserId())
+                .type(NotificationType.PROFILE_UPDATED)
                 .channel("email")
                 .recipient(event.getEmail())
                 .subject("Your Profile Has Been Updated")
                 .templateId("profile-updated")
                 .templateData(templateData)
                 .priority(NotificationType.Priority.MEDIUM)
-                .createdAt(LocalDateTime.now())
+                .timestamp(LocalDateTime.now())
                 .build();
         
         Notification notification = createNotificationFromEvent(notificationEvent);
         notification.setSent(false);
-        notification.setNotificationType(NotificationType.PROFILE_UPDATED);
         
         notification = notificationRepository.save(notification);
         
@@ -646,9 +663,9 @@ public class KafkaConsumerService {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            log.info("Profile update notification sent to user: {}", event.getEmail());
+            log.info("Profile updated email sent to user: {}", event.getEmail());
         } else {
-            log.error("Failed to send profile update notification to user: {}", event.getEmail());
+            log.error("Failed to send profile updated email to user: {}", event.getEmail());
         }
     }
     
@@ -666,18 +683,18 @@ public class KafkaConsumerService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(event.getUserId())
+                .type(NotificationType.ACCOUNT_DISABLED)
                 .channel("email")
                 .recipient(event.getEmail())
                 .subject("Your Account Has Been Disabled")
                 .templateId("account-disabled")
                 .templateData(templateData)
                 .priority(NotificationType.Priority.HIGH)
-                .createdAt(LocalDateTime.now())
+                .timestamp(LocalDateTime.now())
                 .build();
         
         Notification notification = createNotificationFromEvent(notificationEvent);
         notification.setSent(false);
-        notification.setNotificationType(NotificationType.ACCOUNT_DISABLED);
         
         notification = notificationRepository.save(notification);
         
@@ -692,9 +709,9 @@ public class KafkaConsumerService {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            log.info("Account disabled notification sent to user: {}", event.getEmail());
+            log.info("Account disabled email sent to user: {}", event.getEmail());
         } else {
-            log.error("Failed to send account disabled notification to user: {}", event.getEmail());
+            log.error("Failed to send account disabled email to user: {}", event.getEmail());
         }
     }
     
@@ -712,24 +729,24 @@ public class KafkaConsumerService {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID())
                 .userId(event.getUserId())
+                .type(NotificationType.ACCOUNT_ENABLED)
                 .channel("email")
                 .recipient(event.getEmail())
-                .subject("Your Account Has Been Reactivated")
+                .subject("Your Account Has Been Enabled")
                 .templateId("account-enabled")
                 .templateData(templateData)
                 .priority(NotificationType.Priority.HIGH)
-                .createdAt(LocalDateTime.now())
+                .timestamp(LocalDateTime.now())
                 .build();
         
         Notification notification = createNotificationFromEvent(notificationEvent);
         notification.setSent(false);
-        notification.setNotificationType(NotificationType.ACCOUNT_ENABLED);
         
         notification = notificationRepository.save(notification);
         
         boolean success = emailService.sendEmail(
                 event.getEmail(), 
-                "Your Account Has Been Reactivated", 
+                "Your Account Has Been Enabled", 
                 null, 
                 "account-enabled", 
                 templateData);
@@ -738,9 +755,9 @@ public class KafkaConsumerService {
             notification.setSent(true);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
-            log.info("Account enabled notification sent to user: {}", event.getEmail());
+            log.info("Account enabled email sent to user: {}", event.getEmail());
         } else {
-            log.error("Failed to send account enabled notification to user: {}", event.getEmail());
+            log.error("Failed to send account enabled email to user: {}", event.getEmail());
         }
     }
     
@@ -757,6 +774,26 @@ public class KafkaConsumerService {
                 .createdAt(LocalDateTime.now())
                 .relatedEntityId(event.getRelatedEntityId())
                 .relatedEntityType(event.getRelatedEntityType())
+                .priority(event.getPriority())
                 .build();
+    }
+
+    /**
+     * Format amount with currency for display
+     * @param amount The amount
+     * @param currency The currency code
+     * @return Formatted amount string
+     */
+    private String formatAmount(Double amount, String currency) {
+        return String.format("%s %.2f", currency, amount);
+    }
+    
+    /**
+     * Calculate days overdue from due date
+     * @param dueDate The due date
+     * @return Days overdue
+     */
+    private long calculateDaysOverdue(LocalDateTime dueDate) {
+        return LocalDateTime.now().toLocalDate().toEpochDay() - dueDate.toLocalDate().toEpochDay();
     }
 } 
