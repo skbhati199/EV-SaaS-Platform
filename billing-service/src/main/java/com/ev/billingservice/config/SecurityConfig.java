@@ -22,6 +22,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 // Public billing endpoints
                 .requestMatchers("/api/v1/billing/public/**").permitAll()
+                .requestMatchers("/api/v1/billing/test/public").permitAll()
                 // Swagger / OpenAPI endpoints
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()

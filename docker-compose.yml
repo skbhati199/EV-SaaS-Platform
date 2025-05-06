@@ -256,6 +256,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
       - SPRING_DATASOURCE_USERNAME=evsaas
       - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/auth/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/auth/realms/ev-platform/protocol/openid-connect/certs
       - TIMESCALE_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
       - TIMESCALE_DATASOURCE_USERNAME=evsaas
       - TIMESCALE_DATASOURCE_PASSWORD=evsaas_password
