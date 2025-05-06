@@ -1,141 +1,259 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8085/api/v1/billing';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-class BillingService {
-  constructor(private baseUrl: string = API_BASE_URL) {}
-
-  private getAuthHeader() {
-    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-  }
-
-  // Billing Plans
-  async getAllBillingPlans() {
-    try {
-      const response = await axios.get(`${this.baseUrl}/plans`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch billing plans');
-    }
-  }
-
-  async getActiveBillingPlans() {
-    try {
-      const response = await axios.get(`${this.baseUrl}/plans/active`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch active billing plans');
-    }
-  }
-
-  async createBillingPlan(planData: any) {
-    try {
-      const response = await axios.post(`${this.baseUrl}/plans`, planData, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create billing plan');
-    }
-  }
-
-  // Subscriptions
-  async getUserSubscriptions(userId: string) {
-    try {
-      const response = await axios.get(`${this.baseUrl}/subscriptions/user/${userId}`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch user subscriptions');
-    }
-  }
-
-  async createSubscription(subscriptionData: any) {
-    try {
-      const response = await axios.post(`${this.baseUrl}/subscriptions`, subscriptionData, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create subscription');
-    }
-  }
-
-  async cancelSubscription(subscriptionId: string) {
-    try {
-      const response = await axios.put(`${this.baseUrl}/subscriptions/${subscriptionId}/cancel`, null, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to cancel subscription');
-    }
-  }
-
-  // Invoices
-  async getUserInvoices(userId: string) {
-    try {
-      const response = await axios.get(`${this.baseUrl}/invoices/user/${userId}`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch user invoices');
-    }
-  }
-
-  // Payment Methods
-  async getUserPaymentMethods(userId: string) {
-    try {
-      const response = await axios.get(`${this.baseUrl}/payment-methods/user/${userId}`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch payment methods');
-    }
-  }
-
-  async addPaymentMethod(paymentMethodData: any) {
-    try {
-      const response = await axios.post(`${this.baseUrl}/payment-methods`, paymentMethodData, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to add payment method');
-    }
-  }
-
-  // Billing Settings
-  async getOrganizationBillingSettings(organizationId: string) {
-    try {
-      const response = await axios.get(`${this.baseUrl}/settings/organization/${organizationId}`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch billing settings');
-    }
-  }
-
-  async updateBillingSettings(settingsId: string, settingsData: any) {
-    try {
-      const response = await axios.put(`${this.baseUrl}/settings/${settingsId}`, settingsData, {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to update billing settings');
-    }
-  }
+// Type definitions for billing data
+interface BillingPlan {
+  id?: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  priceYearly: number;
+  features: string;
+  isActive: boolean;
+  currency: string;
+  energyRate: number;
+  timeRate: number;
 }
 
-const billingService = new BillingService();
+interface Subscription {
+  id?: string;
+  userId: string;
+  organizationId?: string;
+  planId: string;
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  autoRenew: boolean;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  paymentMethodId?: string;
+}
+
+interface PaymentMethod {
+  id?: string;
+  userId: string;
+  type: string;
+  provider: string;
+  tokenId: string;
+  lastFour: string;
+  expiryMonth: string;
+  expiryYear: string;
+  isDefault: boolean;
+}
+
+interface Invoice {
+  id: string;
+  userId: string;
+  subscriptionId: string;
+  amount: number;
+  status: string;
+  dueDate: string;
+  createdAt: string;
+  paidAt?: string;
+  items: any[];
+}
+
+interface Payment {
+  invoiceId: string;
+  amount: number;
+  paymentMethod: string;
+  transactionId: string;
+}
+
+interface BillingSettings {
+  organizationId: string;
+  billingEmail: string;
+  taxId?: string;
+  billingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  currency: string;
+}
+
+// Service implementation
+export const billingService = {
+  // Authorization header helper
+  getAuthHeader(token: string) {
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    };
+  },
+
+  // Billing Plans
+  async createBillingPlan(token: string, plan: BillingPlan): Promise<BillingPlan> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/plans`, 
+        plan, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getAllBillingPlans(token: string): Promise<BillingPlan[]> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/plans`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getActiveBillingPlans(token: string): Promise<BillingPlan[]> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/plans/active`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Subscriptions
+  async createSubscription(token: string, subscription: Subscription): Promise<Subscription> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/subscriptions`, 
+        subscription, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getUserSubscriptions(token: string, userId: string): Promise<Subscription[]> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/subscriptions/user/${userId}`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async cancelSubscription(token: string, subscriptionId: string): Promise<any> {
+    try {
+      const response = await axios.put(
+        `${API_URL}/api/v1/billing/subscriptions/${subscriptionId}/cancel`, 
+        {}, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Invoices
+  async getUserInvoices(token: string, userId: string): Promise<Invoice[]> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/invoices/user/${userId}`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Payments
+  async createPayment(token: string, payment: Payment): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/payments`, 
+        payment, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Payment Methods
+  async addPaymentMethod(token: string, paymentMethod: PaymentMethod): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/payment-methods`, 
+        paymentMethod, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getUserPaymentMethods(token: string, userId: string): Promise<PaymentMethod[]> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/payment-methods/user/${userId}`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Billing Settings
+  async getOrganizationBillingSettings(token: string, organizationId: string): Promise<BillingSettings> {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/billing/settings/organization/${organizationId}`, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateBillingSettings(token: string, settingsId: string, settings: BillingSettings): Promise<BillingSettings> {
+    try {
+      const response = await axios.put(
+        `${API_URL}/api/v1/billing/settings/${settingsId}`, 
+        settings, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Usage Records
+  async recordUsage(token: string, data: { subscriptionId: string, meterType: string, quantity: number }): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/usage-records`, 
+        data, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
 export default billingService;

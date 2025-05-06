@@ -14,6 +14,7 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { RealTimeEventViewer } from "@/components/dashboard/RealTimeEventViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SystemHealthOverview from '@/app/components/SystemHealthOverview';
+import { ServicesOverview } from './services-overview';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -54,6 +55,7 @@ export default function DashboardPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -135,6 +137,10 @@ export default function DashboardPage() {
           
           {/* Transactions section */}
           <RecentTransactions />
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-4">
+          <ServicesOverview />
         </TabsContent>
         
         <TabsContent value="analytics">

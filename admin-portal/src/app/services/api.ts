@@ -79,6 +79,3 @@ export class ApiService {
     return response.data;
   }
 }
-
-// Create and export a singleton instance
-export const apiService = new ApiService(); 

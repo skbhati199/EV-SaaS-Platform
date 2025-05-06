@@ -1,15 +1,18 @@
-import apiService from './api';
-import authService from './authService';
-import userService from './userService';
-import stationService from './stationService';
-import schedulerService from './schedulerService';
-import billingService from './billingService';
-import roamingService from './roamingService';
-import smartChargingService from './smartChargingService';
-import notificationService from './notificationService';
+import { ApiService } from './api';
+import { authService } from './authService';
+import { userService } from './userService';
+import { stationService } from './stationService';
+import { schedulerService } from './schedulerService';
+import { billingService } from './billingService';
+import { roamingService } from './roamingService';
+import { smartChargingService } from './smartChargingService';
+import { notificationService } from './notificationService';
+
+// Create a singleton instance of ApiService for use throughout the app
+export const apiService = new ApiService();
 
 export {
-  apiService,
+  ApiService,
   authService,
   userService,
   stationService,
