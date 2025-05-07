@@ -10,7 +10,7 @@ loglevel: info
 # Ingress rules determine which traffic should go where
 ingress:
   # Main web service via nginx gateway
-  - hostname: ev.nbevc.com
+  - hostname: api.nbevc.com
     service: http://nginx:80
   
   # Admin portal direct access
@@ -18,8 +18,8 @@ ingress:
     service: http://admin-portal:3000
 
   # API Gateway direct access
-  - hostname: api.nbevc.com
-    service: http://api-gateway:8082
+  # - hostname: api.nbevc.com
+    # service: http://api-gateway:8082
   
   # Auth service direct access
   - hostname: auth.nbevc.com
@@ -28,6 +28,8 @@ ingress:
   # Keycloak admin access
   - hostname: keycloak.nbevc.com
     service: http://keycloak:8080
+    originRequest:
+      connectTimeout: 30s
   
   # Monitoring services
   - hostname: prometheus.nbevc.com
