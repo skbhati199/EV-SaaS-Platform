@@ -516,7 +516,7 @@ services:
       - KC_HOSTNAME_ADMIN_URL=https://keycloak.nbevc.com
       - KC_HOSTNAME_URL=https://keycloak.nbevc.com
       - KC_HTTP_ENABLED=true
-      - KC_PROXY=edge
+      - KC_PROXY=none
       - KC_HEALTH_ENABLED=true
       - KC_HTTP_RELATIVE_PATH=/auth
       - KEYCLOAK_ADMIN_PASSWORD=admin
