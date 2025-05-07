@@ -642,14 +642,14 @@ services:
   ## Cloudflare Tunnel for secure external access
   cloudflare-tunnel:
     image: cloudflare/cloudflared:latest
-    container_name: ev-test-cloudflared
+    container_name: ev-saas-cloudflared
     restart: unless-stopped
     networks:
       - ev-network
     command: tunnel run
     volumes:
       - ./infra/cloudflare:/etc/cloudflared
-      - ${USERPROFILE}/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
+      - C:/Users/skbha/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
       - TUNNEL_ORIGIN_CERT=/etc/cloudflared/cert.pem
