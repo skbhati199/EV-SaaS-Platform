@@ -378,6 +378,8 @@ services:
         condition: service_started
       kafka:
         condition: service_started
+      mailhog:
+        condition: service_started
     networks:
       - ev-network
     environment:
@@ -393,6 +395,15 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Email Configuration
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_MAIL_PORT=1025
+      - SPRING_MAIL_USERNAME=notifications@ev.nbevc.com
+      - SPRING_MAIL_PASSWORD=password
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=false
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=false
+      - APP_EMAIL_FROM_ADDRESS=notifications@ev.nbevc.com
+      - APP_EMAIL_FROM_NAME=EV Platform Notifications
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     labels:
@@ -610,6 +621,58 @@ services:
     depends_on:
       - loki
 
+  ## Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ev-saas-mailhog
+    ports:
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI
+    environment:
+      - MH_HOSTNAME=mailhog.ev.nbevc.com
+      - MH_UI_WEB_PATH=mail
+      - MH_STORAGE=mongodb
+      - MH_MONGO_URI=mongodb://mongo:27017/mailhog
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - mongo
+
+  ## Cloudflare Tunnel for secure external access
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: ev-saas-cloudflared
+    restart: unless-stopped
+    networks:
+      - ev-network
+    command: tunnel run
+    volumes:
+      - ./infra/cloudflare:/etc/cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - keycloak
+
+  ## MongoDB for MailHog storage
+  mongo:
+    image: mongo:4.4
+    container_name: ev-saas-mongo
+    restart: unless-stopped
+    networks:
+      - ev-network
+    volumes:
+      - mailhog_db:/data/db
+
 volumes:
   postgres_data:
   timescaledb_data:
@@ -619,6 +682,7 @@ volumes:
   prometheus_data:
   loki_data:
   nginx_logs:
+  mailhog_db:
 
 networks:
   ev-network:

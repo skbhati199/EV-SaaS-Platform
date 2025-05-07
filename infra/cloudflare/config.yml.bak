@@ -1,0 +1,43 @@
+# Cloudflare Tunnel configuration
+# This file will be populated after tunnel creation
+
+tunnel: ${TUNNEL_ID}
+credentials-file: /etc/cloudflared/credentials.json
+
+# Log level can be one of: debug, info, warn, error, fatal
+loglevel: info
+
+# Ingress rules determine which traffic should go where
+ingress:
+  # Main web service via nginx gateway
+  - hostname: ev.nbevc.com
+    service: http://nginx:80
+  
+  # Admin portal direct access
+  - hostname: admin.ev.nbevc.com
+    service: http://admin-portal:3000
+
+  # API Gateway direct access
+  - hostname: api.ev.nbevc.com
+    service: http://api-gateway:8082
+  
+  # Auth service direct access
+  - hostname: auth.ev.nbevc.com
+    service: http://auth-service:8081
+  
+  # Keycloak admin access
+  - hostname: keycloak.ev.nbevc.com
+    service: http://keycloak:8080
+  
+  # Monitoring services
+  - hostname: prometheus.ev.nbevc.com
+    service: http://prometheus:9090
+  
+  - hostname: grafana.ev.nbevc.com
+    service: http://grafana:3000
+  
+  - hostname: mailhog.ev.nbevc.com
+    service: http://mailhog:8025
+  
+  # Catch-all rule (required)
+  - service: http_status:404 

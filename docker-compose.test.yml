@@ -476,6 +476,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      mailhog:
+        condition: service_started
     networks:
       - ev-test-network
     environment:
@@ -491,11 +493,18 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      # Test email configuration
+      # Enhanced email configuration
       - SPRING_MAIL_HOST=mailhog
       - SPRING_MAIL_PORT=1025
-      - SPRING_MAIL_USERNAME=test
-      - SPRING_MAIL_PASSWORD=test
+      - SPRING_MAIL_USERNAME=notifications@ev.nbevc.com
+      - SPRING_MAIL_PASSWORD=password
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=false
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=false
+      - APP_EMAIL_FROM_ADDRESS=notifications@ev.nbevc.com
+      - APP_EMAIL_FROM_NAME=EV Platform Notifications
+      - APP_EMAIL_TEMPLATES_PATH=/app/templates/email
+      - APP_EMAIL_TEST_MODE=true
+      - APP_EMAIL_TEST_RECIPIENT=test@ev.nbevc.com
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     healthcheck:
@@ -546,13 +555,31 @@ services:
 
   # Mailhog for email testing
   mailhog:
-    image: mailhog/mailhog
+    image: mailhog/mailhog:latest
     container_name: ev-test-mailhog
     ports:
       - "1025:1025" # SMTP server
       - "8025:8025" # Web UI
+    environment:
+      - MH_HOSTNAME=mailhog.ev.nbevc.com
+      - MH_UI_WEB_PATH=mail
+      - MH_STORAGE=mongodb
+      - MH_MONGO_URI=mongodb://mongo:27017/mailhog
     networks:
       - ev-test-network
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  # MongoDB for MailHog storage
+  mongo:
+    image: mongo:4.4
+    container_name: ev-test-mongo
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    volumes:
+      - mailhog_db:/data/db
 
   # Prometheus for metrics collection
   prometheus:
@@ -737,6 +764,32 @@ services:
     depends_on:
       - influxdb
 
+  # Cloudflare Tunnel for secure external access
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: ev-test-cloudflared
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    command: tunnel run
+    volumes:
+      - ./infra/cloudflare:/etc/cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - api-gateway
+      - keycloak
+      - admin-portal
+
 networks:
   ev-test-network:
     driver: bridge
@@ -751,4 +804,5 @@ volumes:
   health_test_results:
   integration-test-results:
   influxdb_test_data:
-  grafana_k6_test_data: 
+  grafana_k6_test_data:
+  mailhog_db: 
