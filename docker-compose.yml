@@ -63,17 +63,20 @@ services:
       - postgres
       - timescaledb
 
-  # TimescaleDB Admin UI
-  timescaledb-admin:
-    image: timescale/timescaledb-tune:latest-pg14
-    container_name: ev-saas-timescaledb-admin
+  # TimescaleDB Admin UI - using alternative image
+  adminer:
+    image: adminer:latest
+    container_name: ev-saas-adminer
     ports:
-      - "8091:3000"
-    environment:
-      DATABASE_URL: postgres://evsaas:evsaas_password@timescaledb:5432/evsaas_timeseries_db
+      - "8091:8080"
     restart: unless-stopped
     networks:
       - ev-network
+    environment:
+      ADMINER_DEFAULT_SERVER: timescaledb
+      ADMINER_DEFAULT_USER: evsaas
+      ADMINER_DEFAULT_PASSWORD: evsaas_password
+      ADMINER_DEFAULT_DB: evsaas_timeseries_db
     depends_on:
       - timescaledb
 
