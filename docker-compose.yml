@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ## Databases
   # TimescaleDB for time-series data (charging sessions, telemetry, etc.)
