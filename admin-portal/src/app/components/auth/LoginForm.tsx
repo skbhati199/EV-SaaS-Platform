@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import Link from 'next/link';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,8 @@ export default function LoginForm() {
         router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Please check your credentials.');
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to login. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +46,8 @@ export default function LoginForm() {
       await verify2FA(twoFactorCode);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Invalid verification code. Please try again.');
+      console.error('2FA verification error:', err);
+      setError(err.response?.data?.message || err.message || 'Invalid verification code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +91,11 @@ export default function LoginForm() {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
+            <div className="mt-2 text-right">
+              <Link href="/forgot-password" className="text-sm text-blue-500 hover:text-blue-700">
+                Forgot password?
+              </Link>
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
@@ -98,6 +106,13 @@ export default function LoginForm() {
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
+          </div>
+          
+          <div className="mt-4 text-center">
+            <span className="text-sm">Don't have an account? </span>
+            <Link href="/register" className="text-sm text-blue-500 hover:text-blue-700">
+              Register
+            </Link>
           </div>
         </form>
       ) : (

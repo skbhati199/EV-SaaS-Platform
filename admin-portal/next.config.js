@@ -5,7 +5,11 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*', // Proxy to Backend
+        destination: 'http://localhost:8080/api/:path*', // Proxy to Nginx
+      },
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:8080/api/v1/:path*', // Explicitly handle v1 paths
       },
     ];
   },
