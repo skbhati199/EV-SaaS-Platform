@@ -3,15 +3,20 @@ const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
-      // API requests - proxy to backend
+      // Auth service endpoints
+      {
+        source: '/api/v1/auth/:path*',
+        destination: 'http://localhost:8081/api/v1/auth/:path*',
+      },
+      // User endpoints
+      {
+        source: '/api/v1/users/:path*',
+        destination: 'http://localhost:8081/api/v1/users/:path*',
+      },
+      // General API endpoints
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*',
-      },
-      // Explicitly handle versioned API paths
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8080/api/v1/:path*',
+        destination: 'http://localhost:8081/api/:path*',
       },
       // Assets, images, etc.
       {

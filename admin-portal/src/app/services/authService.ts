@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 // Use API URL with proper versioning to match Nginx config
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -48,19 +49,42 @@ interface LoginResponse {
   tempToken?: string;
 }
 
+// Interface for JWT token payload
+interface JwtPayload {
+  sub: string;  // subject (user ID)
+  email: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+  roles?: string[];
+  exp: number;
+}
+
 export const authService = {
   // Authentication
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_V1_URL}/auth/login`, { email, password });
+      const response = await axios.post(`${API_V1_URL}/auth/login`, { email, password }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       
       // Convert backend response to match frontend expectations
       const tokenResponse = response.data;
       
       // If it's just a token response with no user info, make a follow-up call
       if (!tokenResponse.user && tokenResponse.accessToken) {
-        // Extract user info from token or make a call to get user profile
-        const userResponse = await this.getUserProfile(tokenResponse.accessToken);
+        // Extract user info from token and make a call to get user profile
+        const decodedToken = jwtDecode<JwtPayload>(tokenResponse.accessToken);
+        const userId = decodedToken.sub;
+        
+        if (!userId) {
+          throw new Error("Unable to decode user ID from token");
+        }
+        
+        const userResponse = await this.getUserProfile(tokenResponse.accessToken, userId);
         
         return {
           user: userResponse,
@@ -77,11 +101,20 @@ export const authService = {
     }
   },
 
-  async getUserProfile(token: string): Promise<any> {
+  async getUserProfile(token: string, userId?: string): Promise<any> {
     try {
-      const response = await axios.get(`${API_V1_URL}/users/me`, {
+      let url = `${API_V1_URL}/users/me`;
+      
+      // If userId is provided, use it with the /{id} endpoint instead
+      if (userId) {
+        url = `${API_V1_URL}/users/${userId}`;
+      }
+      
+      const response = await axios.get(url, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       return response.data;
@@ -94,7 +127,6 @@ export const authService = {
   async register(userData: RegisterRequest): Promise<any> {
     try {
       const response = await axios.post(`${API_V1_URL}/auth/register`, userData, {
-        withCredentials: false,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
