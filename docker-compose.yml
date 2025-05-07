@@ -649,8 +649,10 @@ services:
     command: tunnel run
     volumes:
       - ./infra/cloudflare:/etc/cloudflared
+      - C:/Users/skbha/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_ORIGIN_CERT=/etc/cloudflared/cert.pem
     depends_on:
       - nginx
       - auth-service
