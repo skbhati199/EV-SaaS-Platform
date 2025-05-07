@@ -44,6 +44,39 @@ services:
       timeout: 5s
       retries: 5
 
+  # pgAdmin for PostgreSQL management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ev-saas-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@evplatform.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - postgres
+      - timescaledb
+
+  # TimescaleDB Admin UI
+  timescaledb-admin:
+    image: timescale/timescaledb-tune:latest-pg14
+    container_name: ev-saas-timescaledb-admin
+    ports:
+      - "8091:3000"
+    environment:
+      DATABASE_URL: postgres://evsaas:evsaas_password@timescaledb:5432/evsaas_timeseries_db
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - timescaledb
+
   ## Redis for caching and session management
   redis:
     image: redis:7-alpine
@@ -683,6 +716,7 @@ volumes:
   loki_data:
   nginx_logs:
   mailhog_db:
+  pgadmin_data:
 
 networks:
   ev-network:

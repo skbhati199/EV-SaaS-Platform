@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
 import TwoFactorSetup from '../components/auth/TwoFactorSetup';
@@ -9,11 +9,21 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
+
+  // Only render the component content after mounting on the client
+  if (!isMounted) {
+    return <div className="text-center py-4">Loading...</div>;
+  }
 
   return (
     <ProtectedRoute>
