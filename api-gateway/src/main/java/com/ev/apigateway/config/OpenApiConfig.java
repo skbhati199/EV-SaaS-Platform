@@ -54,7 +54,7 @@ public class OpenApiConfig {
                     .description("Local Development Server"));
                 
             servers.add(new Server()
-                    .url("https://api.evsaas.com")
+                    .url("https://api.nbevc.com")
                     .description("Production Server"));
         }
 

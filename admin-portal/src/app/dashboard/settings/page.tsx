@@ -326,7 +326,7 @@ export default function SettingsPage() {
                   <Label htmlFor="ocpi-base-url">Base URL</Label>
                   <Input 
                     id="ocpi-base-url" 
-                    defaultValue="https://api.evsaas.com/ocpi" 
+                    defaultValue="https://api.nbevc.com/ocpi" 
                   />
                 </div>
                 
@@ -372,7 +372,7 @@ export default function SettingsPage() {
                   <Label htmlFor="ocpp-endpoint">OCPP Endpoint</Label>
                   <Input 
                     id="ocpp-endpoint" 
-                    defaultValue="wss://api.evsaas.com/ocpp" 
+                    defaultValue="wss://api.nbevc.com/ocpp" 
                   />
                 </div>
 
@@ -483,7 +483,7 @@ export default function SettingsPage() {
                   <Label htmlFor="sender-email">Sender Email</Label>
                   <Input 
                     id="sender-email" 
-                    defaultValue="noreply@evsaas.com" 
+                    defaultValue="noreply@nbevc.com" 
                   />
                 </div>
 
