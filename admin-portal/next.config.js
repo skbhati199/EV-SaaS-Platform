@@ -3,15 +3,22 @@ const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
+      // API requests - proxy to backend
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*', // Proxy to Nginx
+        destination: 'http://localhost:8080/api/:path*',
       },
+      // Explicitly handle versioned API paths
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:8080/api/v1/:path*', // Explicitly handle v1 paths
+        destination: 'http://localhost:8080/api/v1/:path*',
       },
-    ];
+      // Assets, images, etc.
+      {
+        source: '/_next/:path*',
+        destination: '/_next/:path*',
+      }
+    ]
   },
 }
 

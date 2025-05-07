@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Use relative URL to leverage Next.js proxy instead of direct backend URL
+// Use API URL with proper versioning to match Nginx config
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_V1_URL = `${API_URL}/v1`;
 
 interface LoginRequest {
   email: string;
@@ -51,7 +52,7 @@ export const authService = {
   // Authentication
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/v1/auth/login`, { email, password });
+      const response = await axios.post(`${API_V1_URL}/auth/login`, { email, password });
       
       // Convert backend response to match frontend expectations
       const tokenResponse = response.data;
@@ -78,7 +79,7 @@ export const authService = {
 
   async getUserProfile(token: string): Promise<any> {
     try {
-      const response = await axios.get(`${API_URL}/v1/users/me`, {
+      const response = await axios.get(`${API_V1_URL}/users/me`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -92,7 +93,7 @@ export const authService = {
 
   async register(userData: RegisterRequest): Promise<any> {
     try {
-      const response = await axios.post(`${API_URL}/v1/auth/register`, userData, {
+      const response = await axios.post(`${API_V1_URL}/auth/register`, userData, {
         withCredentials: false,
         headers: {
           'Content-Type': 'application/json',
@@ -102,13 +103,13 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Registration error:', error);
-      throw new Error('Registration failed');
+      throw error;
     }
   },
 
   async refreshToken(refreshToken: string): Promise<TokenResponse> {
     try {
-      const response = await axios.post(`${API_URL}/v1/auth/refresh?refreshToken=${refreshToken}`);
+      const response = await axios.post(`${API_V1_URL}/auth/refresh?refreshToken=${refreshToken}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -121,7 +122,7 @@ export const authService = {
       const savedToken = token || localStorage.getItem('accessToken');
       if (!savedToken) return false;
       
-      const response = await axios.get(`${API_URL}/v1/auth/validate?token=${savedToken}`);
+      const response = await axios.get(`${API_V1_URL}/auth/validate?token=${savedToken}`);
       return response.data;
     } catch (error) {
       return false;
@@ -130,7 +131,7 @@ export const authService = {
 
   async forgotPassword(email: string): Promise<boolean> {
     try {
-      const response = await axios.post(`${API_URL}/v1/auth/forgot-password`, { email });
+      const response = await axios.post(`${API_V1_URL}/auth/forgot-password`, { email });
       return response.data;
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -140,7 +141,7 @@ export const authService = {
 
   async resetPassword(token: string, newPassword: string): Promise<boolean> {
     try {
-      const response = await axios.post(`${API_URL}/v1/auth/reset-password`, { 
+      const response = await axios.post(`${API_V1_URL}/auth/reset-password`, { 
         token, 
         newPassword 
       });
@@ -156,7 +157,7 @@ export const authService = {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        `${API_URL}/v1/auth/2fa/setup`,
+        `${API_V1_URL}/auth/2fa/setup`,
         {},
         {
           headers: {
@@ -174,7 +175,7 @@ export const authService = {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
-        `${API_URL}/v1/auth/2fa/enable`,
+        `${API_V1_URL}/auth/2fa/enable`,
         { secret, code },
         {
           headers: {
@@ -191,7 +192,7 @@ export const authService = {
   async verify2FA(tempToken: string, code: string): Promise<any> {
     try {
       const response = await axios.post(
-        `${API_URL}/v1/auth/2fa/verify`,
+        `${API_V1_URL}/auth/2fa/verify`,
         { code, tempToken }
       );
       
@@ -212,7 +213,7 @@ export const authService = {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
-        `${API_URL}/v1/auth/2fa/disable`,
+        `${API_V1_URL}/auth/2fa/disable`,
         {},
         {
           headers: {

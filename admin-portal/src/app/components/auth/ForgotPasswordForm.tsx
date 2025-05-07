@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import authService from '../../services/authService';
+import authService from '@/app/services/authService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -23,64 +27,71 @@ export default function ForgotPasswordForm() {
       setIsSubmitted(true);
     } catch (err: any) {
       console.error('Forgot password error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to process request. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Forgot Password</h2>
+    <div className="bg-card dark:bg-card/5 p-8 rounded-xl shadow-md dark:shadow-lg border border-border w-full max-w-md">
+      <h2 className="text-2xl font-bold mb-2 text-foreground">Reset password</h2>
+      <p className="text-sm text-muted-foreground mb-6">
+        Enter your email address and we'll send you a link to reset your password
+      </p>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-destructive/10 dark:bg-destructive/20 border-l-4 border-destructive p-4 text-destructive flex items-start gap-3 mb-4 rounded">
+          <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
         </div>
       )}
       
       {isSubmitted ? (
-        <div className="text-center">
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            If an account exists with that email, we've sent password reset instructions.
+        <div className="space-y-4">
+          <div className="bg-success/10 dark:bg-success/20 border-l-4 border-success p-4 text-success flex items-start gap-3 rounded">
+            <CheckCircle2 className="h-5 w-5 mt-0.5 flex-shrink-0" />
+            <p className="text-sm">Password reset link has been sent to your email.</p>
           </div>
-          <p className="mb-4">Please check your email and follow the instructions.</p>
-          <Link href="/login" className="text-blue-500 hover:text-blue-700">
-            Back to login
-          </Link>
+          <p className="text-center text-sm text-muted-foreground">
+            Check your inbox and follow the instructions to reset your password.
+          </p>
+          <Button className="w-full" asChild>
+            <Link href="/login">Return to login</Link>
+          </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email address</Label>
+            <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="you@example.com"
+              className="bg-background dark:bg-background/50"
               required
             />
-            <p className="text-sm text-gray-600 mt-2">
-              Enter your email address and we'll send you a link to reset your password.
-            </p>
           </div>
           
-          <div className="flex flex-col gap-4">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Sending...' : 'Reset Password'}
-            </button>
-            
-            <Link 
-              href="/login"
-              className="text-center text-sm text-blue-500 hover:text-blue-700"
-            >
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending reset link...
+              </>
+            ) : (
+              'Send reset link'
+            )}
+          </Button>
+          
+          <div className="text-center text-sm text-muted-foreground">
+            <Link href="/login" className="text-primary hover:text-primary/90 dark:text-primary/90 dark:hover:text-primary font-medium">
               Back to login
             </Link>
           </div>
