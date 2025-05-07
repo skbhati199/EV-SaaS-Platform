@@ -1,0 +1,96 @@
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+WORKDIR /app
+
+# Install dependencies based on the preferred package manager
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy source code
+FROM base AS runner
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Create test results directory
+RUN mkdir -p /app/test-results
+
+# Create health test script
+RUN echo '#!/bin/sh\n\
+echo "Starting Health Check Service"\n\
+\n\
+# Parse environment variables\n\
+TEST_INTERVAL=${TEST_INTERVAL_SECONDS:-300}\n\
+API_URL=${NEXT_PUBLIC_API_URL:-http://nginx:80}\n\
+SERVICES=${SERVICES_TO_TEST:-auth-service,user-service,billing-service,station-service,roaming-service,smart-charging,notification-service,scheduler-service}\n\
+\n\
+# Log configuration\n\
+echo "Configuration:"\n\
+echo "  Test Interval: $TEST_INTERVAL seconds"\n\
+echo "  API URL: $API_URL"\n\
+echo "  Services to test: $SERVICES"\n\
+\n\
+# Create results directory if it doesn\'t exist\n\
+mkdir -p /app/test-results\n\
+\n\
+# Function to run tests against services\n\
+run_tests() {\n\
+  timestamp=$(date +"%Y-%m-%d %H:%M:%S")\n\
+  echo "[$timestamp] Running health checks..."\n\
+  \n\
+  # Initialize results file\n\
+  result_file="/app/test-results/health-check-$(date +"%Y%m%d-%H%M%S").json"\n\
+  echo "{\\"timestamp\\": \\"$timestamp\\", \\"services\\": {" > $result_file\n\
+  \n\
+  # Split services string into array\n\
+  IFS=","\n\
+  services_array=($SERVICES)\n\
+  \n\
+  # Test each service\n\
+  for i in "${!services_array[@]}"; do\n\
+    service=${services_array[$i]}\n\
+    endpoint="/api/${service}/health"\n\
+    \n\
+    echo "  Testing $service at $endpoint"\n\
+    \n\
+    # Make request and capture response\n\
+    response=$(curl -s -o /dev/null -w "%{http_code}" ${API_URL}${endpoint} 2>/dev/null || echo "000")\n\
+    \n\
+    # Determine status\n\
+    if [ "$response" = "200" ]; then\n\
+      status="healthy"\n\
+      echo "    ✅ $service is healthy ($response)"\n\
+    else\n\
+      status="unhealthy"\n\
+      echo "    ❌ $service is unhealthy ($response)"\n\
+    fi\n\
+    \n\
+    # Add to results JSON\n\
+    comma=","\n\
+    if [ $i -eq $((${#services_array[@]} - 1)) ]; then\n\
+      comma=""\n\
+    fi\n\
+    echo "\\"$service\\": {\\"status\\": \\"$status\\", \\"response\\": $response}$comma" >> $result_file\n\
+  done\n\
+  \n\
+  # Close JSON\n\
+  echo "}, \\"summary\\": {\\"total\\": ${#services_array[@]}, \\"timestamp\\": \\"$timestamp\\"}}" >> $result_file\n\
+  \n\
+  echo "[$timestamp] Health check completed. Results saved to $result_file"\n\
+}\n\
+\n\
+# Main loop\n\
+while true; do\n\
+  run_tests\n\
+  echo "Sleeping for $TEST_INTERVAL seconds..."\n\
+  sleep $TEST_INTERVAL\n\
+done\n\
+' > /app/run-health-tests.sh
+
+# Make script executable
+RUN chmod +x /app/run-health-tests.sh
+
+# Run the health test script
+CMD ["/app/run-health-tests.sh"] 

@@ -1,0 +1,808 @@
+version: '3.8'
+
+services:
+  ## Databases
+  # TimescaleDB for time-series data (charging sessions, telemetry, etc.)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: ev-test-timescaledb
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_USER: evtest
+      POSTGRES_PASSWORD: evtest_password
+      POSTGRES_DB: evtest_timeseries_db
+    volumes:
+      - timescaledb_test_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/timescaledb:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evtest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Regular PostgreSQL for user data, auth, billing, etc.
+  postgres:
+    image: postgres:14-alpine
+    container_name: ev-test-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: evtest
+      POSTGRES_PASSWORD: evtest_password
+      POSTGRES_DB: evtest_db
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/postgres:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evtest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ## Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: ev-test-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - ev-test-network
+    command: redis-server --save 60 1 --loglevel warning
+
+  ## Service Discovery
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: ev-test-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - ev-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+
+  # Kafka and Zookeeper for event streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: ev-test-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ev-test-network
+
+  # Kafka broker
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: ev-test-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ev-test-network
+
+  # Keycloak for identity and access management
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: ev-test-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - KC_DB_USERNAME=evtest
+      - KC_DB_PASSWORD=evtest_password
+    command:
+      - start-dev
+      - --import-realm
+    volumes:
+      - ./infra/keycloak/realm-import:/opt/keycloak/data/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ev-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  ## Nginx Gateway
+  nginx:
+    image: nginx:alpine
+    container_name: ev-test-nginx
+    ports:
+      - "8090:80"
+    volumes:
+      - ./infra/docker/nginx/custom_nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/docker/nginx/http_config.conf:/etc/nginx/http_config.conf:ro
+      - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/docker/nginx/index.html:/usr/share/nginx/html/index.html:ro
+      - nginx_test_logs:/var/log/nginx
+    depends_on:
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - api-gateway
+    networks:
+      - ev-test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  ## API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: ev-test-api-gateway
+    ports:
+      - "8082:8082"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8082
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
+    container_name: ev-test-auth
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./auth-service:/workspace/app  # Mount source code for testing
+      - ~/.m2:/root/.m2  # Mount Maven cache for faster builds
+    depends_on:
+      keycloak:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8081
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      # Keycloak Configuration
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=ev-platform
+      - KEYCLOAK_RESOURCE=auth-service
+      - KEYCLOAK_SSL_REQUIRED=external
+      - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Swagger Configuration
+      - SPRINGDOC_API_DOCS_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
+      - SPRINGDOC_API_DOCS_PATH=/api-docs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: ev-test-user
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8084
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Keycloak Configuration
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Billing Service
+  billing-service:
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    container_name: ev-test-billing
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8083
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Station Service
+  station-service:
+    build:
+      context: ./station-service
+      dockerfile: Dockerfile
+    container_name: ev-test-station
+    ports:
+      - "8085:8085"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evtest_timeseries_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8085
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Roaming Service
+  roaming-service:
+    build:
+      context: ./roaming-service
+      dockerfile: Dockerfile
+    container_name: ev-test-roaming
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8086
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Smart Charging Service
+  smart-charging:
+    build:
+      context: ./smart-charging
+      dockerfile: Dockerfile
+    container_name: ev-test-smart-charging
+    ports:
+      - "8087:8087"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evtest_timeseries_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8087
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Notification Service
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: ev-test-notification
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8088
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enhanced email configuration
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_MAIL_PORT=1025
+      - SPRING_MAIL_USERNAME=notifications@ev.nbevc.com
+      - SPRING_MAIL_PASSWORD=password
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=false
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=false
+      - APP_EMAIL_FROM_ADDRESS=notifications@ev.nbevc.com
+      - APP_EMAIL_FROM_NAME=EV Platform Notifications
+      - APP_EMAIL_TEMPLATES_PATH=/app/templates/email
+      - APP_EMAIL_TEST_MODE=true
+      - APP_EMAIL_TEST_RECIPIENT=test@ev.nbevc.com
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  ## Scheduler Service
+  scheduler-service:
+    build:
+      context: ./scheduler-service
+      dockerfile: Dockerfile
+    container_name: ev-test-scheduler
+    ports:
+      - "8089:8089"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-test-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evtest_db
+      - SPRING_DATASOURCE_USERNAME=evtest
+      - SPRING_DATASOURCE_PASSWORD=evtest_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8089
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ev-test-mailhog
+    ports:
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI
+    environment:
+      - MH_HOSTNAME=mailhog.ev.nbevc.com
+      - MH_UI_WEB_PATH=mail
+      - MH_STORAGE=mongodb
+      - MH_MONGO_URI=mongodb://mongo:27017/mailhog
+    networks:
+      - ev-test-network
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  # MongoDB for MailHog storage
+  mongo:
+    image: mongo:4.4
+    container_name: ev-test-mongo
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    volumes:
+      - mailhog_db:/data/db
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ev-test-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_test_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - ev-test-network
+    depends_on:
+      - auth-service
+      - user-service
+      - billing-service
+      - station-service
+      - roaming-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - api-gateway
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ev-test-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_test_data:/var/lib/grafana
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - ev-test-network
+    depends_on:
+      - prometheus
+
+  # NextJS Admin Portal
+  admin-portal:
+    build:
+      context: ./admin-portal
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://nginx:80
+        - NEXT_PUBLIC_AUTH_URL=http://keycloak:8080/auth
+    container_name: ev-test-admin-portal
+    ports:
+      - "3001:3000"
+    networks:
+      - ev-test-network
+    depends_on:
+      - nginx
+      - auth-service
+    environment:
+      - NODE_ENV=test
+
+  # System Health Test 
+  system-health-test:
+    build:
+      context: ./admin-portal
+      dockerfile: Dockerfile.test
+    container_name: ev-test-system-health
+    environment:
+      - NODE_ENV=test
+      - NEXT_PUBLIC_API_URL=http://nginx:80
+      - TEST_INTERVAL_SECONDS=300 # Run tests every 5 minutes
+      - SERVICES_TO_TEST=auth-service,user-service,billing-service,station-service,roaming-service,smart-charging,notification-service,scheduler-service
+    volumes:
+      - health_test_results:/app/test-results
+    depends_on:
+      - nginx
+      - auth-service
+      - user-service
+      - billing-service
+      - station-service
+      - roaming-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+    networks:
+      - ev-test-network
+    restart: unless-stopped
+
+  # Integration Tests
+  integration-tests:
+    image: postman/newman:alpine
+    container_name: ev-test-integration
+    volumes:
+      - ./EV\ SaaS\ Auth\ Service\ API.postman_collection.json:/etc/newman/collection.json
+      - ./integration-test-results:/etc/newman/results
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for services to start up...' &&
+        sleep 60 &&
+        echo 'Running integration tests...' &&
+        newman run /etc/newman/collection.json 
+        --environment-var baseUrl=http://nginx:80
+        --reporters cli,junit,htmlextra
+        --reporter-junit-export /etc/newman/results/junit-report.xml
+        --reporter-htmlextra-export /etc/newman/results/html-report.html
+      "
+    depends_on:
+      - nginx
+      - auth-service
+      - user-service
+      - billing-service
+      - station-service
+      - roaming-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - api-gateway
+    networks:
+      - ev-test-network
+
+  # Load Testing
+  load-testing:
+    image: loadimpact/k6:latest
+    container_name: ev-test-load
+    volumes:
+      - ./infra/testing/k6-scripts:/scripts
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for services to start up...' &&
+        sleep 120 &&
+        echo 'Running load tests...' &&
+        k6 run /scripts/load-test.js
+      "
+    environment:
+      - K6_OUT=influxdb=http://influxdb:8086/k6
+      - BASE_URL=http://nginx:80
+      - VUS=10
+      - DURATION=30s
+    depends_on:
+      - nginx
+      - auth-service
+      - influxdb
+    networks:
+      - ev-test-network
+
+  # InfluxDB for storing load test results
+  influxdb:
+    image: influxdb:1.8
+    container_name: ev-test-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    volumes:
+      - influxdb_test_data:/var/lib/influxdb
+    networks:
+      - ev-test-network
+
+  # Visualization for load test results
+  grafana-k6:
+    image: grafana/grafana:latest
+    container_name: ev-test-grafana-k6
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infra/testing/grafana-dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/testing/grafana-datasources:/etc/grafana/provisioning/datasources
+      - grafana_k6_test_data:/var/lib/grafana
+    networks:
+      - ev-test-network
+    depends_on:
+      - influxdb
+
+  # Cloudflare Tunnel for secure external access
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: ev-test-cloudflared
+    restart: unless-stopped
+    networks:
+      - ev-test-network
+    command: tunnel run
+    volumes:
+      - ./infra/cloudflare:/etc/cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
+      - scheduler-service
+      - api-gateway
+      - keycloak
+      - admin-portal
+
+networks:
+  ev-test-network:
+    driver: bridge
+
+volumes:
+  timescaledb_test_data:
+  postgres_test_data:
+  redis_test_data:
+  nginx_test_logs:
+  prometheus_test_data:
+  grafana_test_data:
+  health_test_results:
+  integration-test-results:
+  influxdb_test_data:
+  grafana_k6_test_data:
+  mailhog_db: 
