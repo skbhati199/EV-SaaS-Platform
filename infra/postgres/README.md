@@ -41,12 +41,24 @@ pgAdmin is included in the Docker Compose setup for easy database management:
    - Password: `evsaas_password`
 4. Click "Save"
 
-## TimescaleDB UI
+## Adminer for Database Management
 
-The TimescaleDB Admin UI provides management and monitoring tools specific to TimescaleDB:
+We use Adminer as a lightweight alternative to phpMyAdmin for managing both PostgreSQL and TimescaleDB:
 
-1. Access the UI in your browser at: http://localhost:8091
-2. The connection to the database is pre-configured
+1. Access Adminer in your browser at: http://localhost:8091
+2. Login with:
+   - System: PostgreSQL
+   - Server: `timescaledb` or `postgres` (depending on which database you want to access)
+   - Username: `evsaas`
+   - Password: `evsaas_password`
+   - Database: `evsaas_timeseries_db` or `evsaas_db`
+
+Adminer allows you to:
+- Browse tables and data
+- Execute SQL queries
+- Create, modify, and delete database objects
+- Export and import data
+- View database structure
 
 ## Important Tables
 
