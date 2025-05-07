@@ -8,12 +8,14 @@ export class ApiService {
   protected api: AxiosInstance;
   
   constructor() {
-    // Create axios instance
+    // Create axios instance with CORS support
     this.api = axios.create({
       baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
+      // Enable credentials for CORS requests (cookies, auth headers)
+      withCredentials: true,
     });
 
     // Add request interceptor to add auth token to requests
