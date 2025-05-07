@@ -28,6 +28,8 @@ interface AuthState {
   setup2FA: () => Promise<{ qrCodeImage: string; secret: string }>;
   enable2FA: (secret: string, code: string) => Promise<void>;
   disable2FA: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
 const useAuthStore = create<AuthState>()(
@@ -45,6 +47,11 @@ const useAuthStore = create<AuthState>()(
           if (response.requiresTwoFactor) {
             set({ tempTwoFactorToken: response.tempToken });
             return { requiresTwoFactor: true };
+          }
+          
+          // Save tokens
+          if (response.accessToken) {
+            authService.saveTokens(response.accessToken, response.refreshToken);
           }
           
           set({ 
@@ -127,6 +134,22 @@ const useAuthStore = create<AuthState>()(
         } catch (error) {
           throw error;
         }
+      },
+      
+      forgotPassword: async (email) => {
+        try {
+          await authService.forgotPassword(email);
+        } catch (error) {
+          throw error;
+        }
+      },
+      
+      resetPassword: async (token, newPassword) => {
+        try {
+          await authService.resetPassword(token, newPassword);
+        } catch (error) {
+          throw error;
+        }
       }
     }),
     {
@@ -145,17 +168,23 @@ export const useAuth = () => {
   
   // Initialize auth state on first load
   if (auth.isLoading) {
-    authService.validateToken()
-      .then(isValid => {
-        if (!isValid) {
+    const token = authService.getAccessToken();
+    
+    if (token) {
+      authService.validateToken(token)
+        .then(isValid => {
+          if (!isValid) {
+            auth.logout();
+          }
+          useAuthStore.setState({ isLoading: false });
+        })
+        .catch(() => {
           auth.logout();
-        }
-        useAuthStore.setState({ isLoading: false });
-      })
-      .catch(() => {
-        auth.logout();
-        useAuthStore.setState({ isLoading: false });
-      });
+          useAuthStore.setState({ isLoading: false });
+        });
+    } else {
+      useAuthStore.setState({ isLoading: false });
+    }
   }
   
   return auth;

@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +31,36 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    
+    @GetMapping("/me")
+    @Operation(
+        summary = "Get current user profile",
+        description = "Retrieves the profile of the currently authenticated user",
+        tags = {"User Management"},
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User profile retrieved successfully", 
+                content = @Content(schema = @Schema(implementation = UserResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<UserResponse> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName(); // Assuming the principal contains the user ID
+        log.info("Fetching current user profile for ID: {}", userId);
+        
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            Optional<UserResponse> userResponse = userService.getUserById(userUuid);
+            return userResponse
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid user ID format: {}", userId, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
     
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
