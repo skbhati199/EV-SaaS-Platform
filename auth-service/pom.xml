@@ -31,6 +31,7 @@
         <spring-cloud.version>2023.0.2</spring-cloud.version>
         <keycloak.version>24.0.1</keycloak.version>
         <springdoc.version>2.5.0</springdoc.version>
+        <mockito.version>5.2.0</mockito.version>
     </properties>
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -155,6 +156,13 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-inline</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

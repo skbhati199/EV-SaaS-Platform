@@ -18,6 +18,7 @@ import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,7 +61,7 @@ public class AuthControllerIntegrationTest {
         loginRequest.setPassword("Password123!");
 
         userResponse = UserResponse.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .email("test@example.com")
                 .firstName("Test")
                 .lastName("User")

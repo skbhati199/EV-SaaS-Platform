@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -61,7 +62,7 @@ public class AuthControllerTest {
         loginRequest.setPassword("Password123!");
 
         userResponse = UserResponse.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .email("test@example.com")
                 .firstName("Test")
                 .lastName("User")
@@ -86,7 +87,7 @@ public class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.firstName").value("Test"))
                 .andExpect(jsonPath("$.lastName").value("User"))

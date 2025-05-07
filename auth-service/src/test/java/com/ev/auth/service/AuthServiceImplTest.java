@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,7 +58,7 @@ public class AuthServiceImplTest {
         registerRequest.setRole("USER");
 
         mockUser = User.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .username("test@example.com")
                 .email("test@example.com")
                 .password("encodedPassword")
@@ -90,7 +91,7 @@ public class AuthServiceImplTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(1L, response.getId());
+        assertEquals(mockUser.getId(), response.getId());
         assertEquals("test@example.com", response.getEmail());
         assertEquals("Test", response.getFirstName());
         assertEquals("User", response.getLastName());
@@ -181,7 +182,7 @@ public class AuthServiceImplTest {
     void testLoginWithDisabledAccount() {
         // Arrange
         User disabledUser = User.builder()
-                .id(1L)
+                .id(UUID.randomUUID())
                 .username("test@example.com")
                 .email("test@example.com")
                 .password("encodedPassword")
