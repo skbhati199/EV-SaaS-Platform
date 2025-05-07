@@ -2,6 +2,7 @@ package com.ev.auth.service;
 
 import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
+import com.ev.auth.exception.UserConflictException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
@@ -63,6 +64,23 @@ public class KeycloakAdminService implements KeycloakService {
                 .clientId("admin-cli")
                 .build();
                 
+            // Check if user with same username or email already exists
+            RealmResource realmResource = adminKeycloak.realm(realm);
+            UsersResource usersResource = realmResource.users();
+            
+            // Search by username
+            List<UserRepresentation> existingUsersByUsername = usersResource.search(request.getUsername(), true);
+            // Search by email
+            List<UserRepresentation> existingUsersByEmail = usersResource.search(request.getEmail(), 0, 1);
+            
+            if (!existingUsersByUsername.isEmpty()) {
+                throw new UserConflictException("User with this username already exists");
+            }
+            
+            if (!existingUsersByEmail.isEmpty()) {
+                throw new UserConflictException("User with this email already exists");
+            }
+            
             // Create user representation
             UserRepresentation user = new UserRepresentation();
             user.setUsername(request.getUsername());
@@ -72,15 +90,15 @@ public class KeycloakAdminService implements KeycloakService {
             user.setEnabled(true);
             user.setEmailVerified(false);
 
-            // Get realm
-            RealmResource realmResource = adminKeycloak.realm(realm);
-            UsersResource usersResource = realmResource.users();
-
             // Create user (returns a response)
             Response response = usersResource.create(user);
             
             if (response.getStatus() >= 400) {
-                throw new RuntimeException("Failed to create user in Keycloak: " + response.getStatusInfo().getReasonPhrase());
+                if (response.getStatus() == 409) {
+                    throw new UserConflictException("User already exists in Keycloak: username or email is already taken");
+                } else {
+                    throw new RuntimeException("Failed to create user in Keycloak: " + response.getStatusInfo().getReasonPhrase());
+                }
             }
             
             // Get created user ID
@@ -97,8 +115,14 @@ public class KeycloakAdminService implements KeycloakService {
             
             log.info("Created user in Keycloak with ID: {}", userId);
             return userId;
+        } catch (UserConflictException e) {
+            log.error("User conflict error: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Error creating user in Keycloak", e);
+            if (e.getMessage() != null && (e.getMessage().contains("already exists") || e.getMessage().contains("Conflict"))) {
+                throw new UserConflictException("User already exists with the provided username or email", e);
+            }
             throw new RuntimeException("Failed to create user in Keycloak", e);
         }
     }
