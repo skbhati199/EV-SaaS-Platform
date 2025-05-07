@@ -4,9 +4,27 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
-import { apiService } from "@/app/services";
+import axios, { AxiosError } from 'axios';
 
-const services = [
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+type Service = {
+  name: string;
+  endpoint: string;
+};
+
+type ServiceResult = {
+  status: 'success' | 'error';
+  responseTime?: number;
+  data?: any;
+  message?: string;
+};
+
+type TestResults = {
+  [key: string]: ServiceResult;
+};
+
+const services: Service[] = [
   { name: "API Gateway", endpoint: "/api-gateway/health" },
   { name: "Auth Service", endpoint: "/auth/health" },
   { name: "User Service", endpoint: "/api/users/health" },
@@ -18,17 +36,17 @@ const services = [
 ];
 
 export default function ServicesTestPage() {
-  const [results, setResults] = useState({});
+  const [results, setResults] = useState<TestResults>({});
   const [testing, setTesting] = useState(false);
   
   const testAllServices = async () => {
     setTesting(true);
-    const newResults = {};
+    const newResults: TestResults = {};
     
     for (const service of services) {
       try {
         const startTime = performance.now();
-        const response = await apiService.api.get(service.endpoint);
+        const response = await axios.get(`${API_BASE_URL}${service.endpoint}`);
         const endTime = performance.now();
         
         newResults[service.name] = {
@@ -37,9 +55,10 @@ export default function ServicesTestPage() {
           data: response.data
         };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         newResults[service.name] = {
           status: 'error',
-          message: error.message
+          message: errorMessage
         };
       }
     }
