@@ -37,7 +37,7 @@ RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next/cache
 
 # Create public directory if it doesn't exist
 
-COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/package.json ./package.json
 
 # Automatically leverage output traces to reduce image size

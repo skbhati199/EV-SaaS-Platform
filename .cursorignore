@@ -27,8 +27,8 @@ install.sh
 # === Packages Workspace ===
 packages/*/node_modules/
 packages/*/dist/
-packages/*/lib/
-packages/*/es/
+# packages/*/lib/
+# packages/*/es/
 packages/*/.turbo/
 
 .turbo
