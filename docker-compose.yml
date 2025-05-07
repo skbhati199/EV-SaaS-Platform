@@ -508,22 +508,22 @@ services:
       - "prometheus.port=8088"
 
   # Admin Portal
-  admin-portal:
-    build:
-      context: ./admin-portal
-      dockerfile: Dockerfile
-    container_name: ev-saas-admin-portal
-    ports:
-      - "3001:3001"
-    depends_on:
-      - nginx
-      - grafana
-    networks:
-      - ev-network
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://nginx:80
-      - NEXT_PUBLIC_GRAFANA_URL=http://grafana:3000
-      - NODE_ENV=production
+  # admin-portal:
+  #   build:
+  #     context: ./admin-portal
+  #     dockerfile: Dockerfile
+  #   container_name: ev-saas-admin-portal
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     - nginx
+  #     - grafana
+  #   networks:
+  #     - ev-network
+  #   environment:
+  #     - NEXT_PUBLIC_API_BASE_URL=http://nginx:80
+  #     - NEXT_PUBLIC_GRAFANA_URL=http://grafana:3000
+  #     - NODE_ENV=production
 
   ## Keycloak for Identity and Access Management
   keycloak:
