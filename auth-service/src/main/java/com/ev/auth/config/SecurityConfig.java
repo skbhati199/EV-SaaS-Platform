@@ -25,6 +25,9 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 
 import java.util.Collection;
 import java.util.List;
@@ -90,7 +93,13 @@ public class SecurityConfig {
     
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        // Skip issuer validation
+        OAuth2TokenValidator<Jwt> withoutIssuer = new DelegatingOAuth2TokenValidator<>(
+            new JwtTimestampValidator()
+        );
+        jwtDecoder.setJwtValidator(withoutIssuer);
+        return jwtDecoder;
     }
     
     @Bean
