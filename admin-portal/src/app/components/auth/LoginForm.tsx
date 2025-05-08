@@ -128,7 +128,7 @@ export default function LoginForm() {
           </Button>
           
           <div className="text-center text-sm text-muted-foreground">
-            <span>Don't have an account? </span>
+            <span>Don&apos;t have an account? </span>
             <Link href="/register" className="text-primary hover:text-primary/90 dark:text-primary/90 dark:hover:text-primary font-medium">
               Create account
             </Link>

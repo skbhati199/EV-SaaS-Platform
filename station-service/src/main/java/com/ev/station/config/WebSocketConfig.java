@@ -21,8 +21,14 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Register the OCPP handler for charging stations
+        // Register the OCPP handler for charging stations (dual paths for compatibility)
+        // Primary path (/ws/ocpp/)
         registry.addHandler(ocppWebSocketHandler, "/ws/ocpp/{stationId}")
+                .addInterceptors(handshakeInterceptor)
+                .setAllowedOrigins("*");
+                
+        // Alternative path (/ocpp/) to match security configuration
+        registry.addHandler(ocppWebSocketHandler, "/ocpp/{stationId}")
                 .addInterceptors(handshakeInterceptor)
                 .setAllowedOrigins("*");
     }

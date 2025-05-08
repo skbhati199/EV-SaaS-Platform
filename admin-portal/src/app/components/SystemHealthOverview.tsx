@@ -81,8 +81,8 @@ const SystemHealthOverview: React.FC = () => {
           lastChecked: new Date()
         },
         {
-          name: 'Keycloak',
-          status: Math.random() > 0.05 ? 'UP' : 'DOWN',
+          name: 'Auth Service',
+          status: 'UP',
           lastChecked: new Date()
         }
       ];

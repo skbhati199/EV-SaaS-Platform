@@ -133,3 +133,48 @@ const authService = new AuthService('https://your-api-url.com');
 - Protected routes prevent unauthorized access to sensitive pages
 - Token validation occurs on application startup
 - Automatic logout on token expiration
+
+## Deployment with Bun and Vercel
+
+This project is configured to use Bun for improved performance and Vercel for deployment.
+
+### Local Development with Bun
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install dependencies
+bun install
+
+# Run the development server
+bun run bun:dev
+```
+
+### Deploying to Vercel
+
+The project includes a `vercel.json` configuration file optimized for Bun deployment:
+
+1. Connect your GitHub repository to Vercel
+2. Vercel will automatically detect the Next.js project
+3. Use the following settings during deployment:
+   - Framework Preset: Next.js
+   - Build Command: `bun run bun:build`
+   - Install Command: `bun install`
+   - Output Directory: `.next`
+
+Alternatively, deploy directly from the CLI:
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+### Environment Variables
+
+Make sure to set these environment variables in your Vercel project:
+
+- `NEXT_PUBLIC_API_URL`: Your backend API URL (e.g., https://api.nbevc.com/api)

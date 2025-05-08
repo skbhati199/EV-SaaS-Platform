@@ -181,7 +181,7 @@ export default function StationDetailPage({ params }: StationDetailProps) {
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
           <p className="text-xl font-semibold mb-2">Station Not Found</p>
-          <p className="text-muted-foreground mb-4">We couldn't find a station with the ID: {id}</p>
+          <p className="text-muted-foreground mb-4">We couldn&apos;t find a station with the ID: {id}</p>
           <Button onClick={() => router.push('/dashboard/stations')}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Stations
           </Button>

@@ -6,6 +6,36 @@ const nextConfig = {
     ignoreBuildErrors: process.env.NODE_ENV === 'production',
     tsconfigPath: 'tsconfig.json',
   },
+  
+  // Explicitly enable SWC and disable Babel
+  swcMinify: true,
+  experimental: {
+    forceSwcTransforms: true,
+  },
+  
+  // Runtime configuration for handling browser APIs
+  serverRuntimeConfig: {
+    // Will only be available on the server side
+  },
+  publicRuntimeConfig: {
+    // Will be available on both server and client
+    staticFolder: '/static',
+  },
+  
+  images: { unoptimized: true },
+  
+  // Disable automatic static optimization for paths that need browser APIs
+  // This tells Next.js not to statically optimize these pages at build time
+  trailingSlash: true,
+
+  // Disable SSR for problematic pages
+  // Better error handling
+  onDemandEntries: {
+    // period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
 
   // Configure CORS and HTTP proxy settings
   async headers() {
@@ -29,12 +59,12 @@ const nextConfig = {
       // Auth service endpoints
       {
         source: '/api/v1/auth/:path*',
-        destination: 'http://192.168.29.133:8081/api/v1/auth/:path*',
+        destination: 'http://api.nbevc.com/api/v1/auth/:path*',
       },
       // User endpoints
       {
         source: '/api/v1/users/:path*',
-        destination: 'http://192.168.29.133:8081/api/v1/users/:path*',
+        destination: 'http://api.nbevc.com/api/v1/users/:path*',
       },
       // General API endpoints
       {

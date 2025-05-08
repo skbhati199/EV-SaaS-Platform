@@ -23,11 +23,13 @@ public class ConnectorController {
     private final ConnectorService connectorService;
     
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<List<ConnectorDto>> getConnectorsByStationId(@PathVariable UUID stationId) {
         return ResponseEntity.ok(connectorService.getConnectorsByStationId(stationId));
     }
     
     @GetMapping("/{connectorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<ConnectorDto> getConnectorByStationIdAndConnectorId(
             @PathVariable UUID stationId,
             @PathVariable Integer connectorId) {
@@ -35,6 +37,7 @@ public class ConnectorController {
     }
     
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<List<ConnectorDto>> getConnectorsByStationIdAndStatus(
             @PathVariable UUID stationId,
             @PathVariable StationStatus status) {

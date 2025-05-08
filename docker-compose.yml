@@ -191,8 +191,6 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      keycloak:
-        condition: service_started
       postgres:
         condition: service_healthy
       eureka-server:
@@ -210,19 +208,6 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
-      # Keycloak Configuration
-      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
-      - KEYCLOAK_REALM=ev-platform
-      - KEYCLOAK_RESOURCE=auth-service
-      - KEYCLOAK_SSL_REQUIRED=external
-      - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
-      - KEYCLOAK_ADMIN_USERNAME=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - JWT_SECRET=development_secret
-      - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
-      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       # Swagger Configuration
       - SPRINGDOC_API_DOCS_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_ENABLED=true
@@ -265,9 +250,6 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      # Keycloak Configuration
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     labels:
@@ -459,8 +441,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
-      keycloak:
-        condition: service_started
       eureka-server:
         condition: service_started
     networks:
@@ -478,9 +458,6 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      # Keycloak Configuration
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     labels:
@@ -528,48 +505,6 @@ services:
   #     - NEXT_PUBLIC_API_BASE_URL=http://nginx:80
   #     - NEXT_PUBLIC_GRAFANA_URL=http://grafana:3000
   #     - NODE_ENV=production
-
-  ## Keycloak for Identity and Access Management
-  keycloak:
-    image: quay.io/keycloak/keycloak:latest
-    container_name: ev-saas-keycloak
-    ports:
-      - "8090:8080"
-      - "9000:9000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - ev-network
-    environment:
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres:5432/evsaas_db
-      - KC_DB_USERNAME=evsaas
-      - KC_DB_PASSWORD=evsaas_password
-      - KC_HOSTNAME=keycloak.nbevc.com
-      - KC_HOSTNAME_PORT=443
-      - KC_HOSTNAME_ADMIN_URL=https://keycloak.nbevc.com
-      - KC_HOSTNAME_URL=https://keycloak.nbevc.com
-      - KC_HTTP_ENABLED=true
-      - KC_PROXY=edge
-      - KC_HEALTH_ENABLED=true
-      # - KC_HTTP_RELATIVE_PATH=/auth
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KEYCLOAK_ADMIN=admin
-    command: start-dev --import-realm
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/keycloak/bin/healthcheck.sh"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    volumes:
-      - keycloak_data:/opt/keycloak/data
-      - ./infra/keycloak/realm-import:/opt/keycloak/data/import
-      - ./infra/keycloak/healthcheck.sh:/opt/keycloak/bin/healthcheck.sh
 
   ## Prometheus for metrics collection and monitoring
   prometheus:
@@ -698,7 +633,6 @@ services:
       - smart-charging
       - notification-service
       - scheduler-service
-      - keycloak
 
   ## MongoDB for MailHog storage
   mongo:
@@ -714,7 +648,6 @@ volumes:
   postgres_data:
   timescaledb_data:
   redis_data:
-  keycloak_data:
   grafana_data:
   prometheus_data:
   loki_data:

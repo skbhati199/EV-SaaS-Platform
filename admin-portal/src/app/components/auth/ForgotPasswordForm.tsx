@@ -37,7 +37,7 @@ export default function ForgotPasswordForm() {
     <div className="bg-card dark:bg-card/5 p-8 rounded-xl shadow-md dark:shadow-lg border border-border w-full max-w-md">
       <h2 className="text-2xl font-bold mb-2 text-foreground">Reset password</h2>
       <p className="text-sm text-muted-foreground mb-6">
-        Enter your email address and we'll send you a link to reset your password
+        Enter your email address and we&apos;ll send you a link to reset your password
       </p>
       
       {error && (

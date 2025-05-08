@@ -1,5 +1,9 @@
+'use client';
+
+import { Suspense } from 'react';
 import LoginForm from '@/app/components/auth/LoginForm';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import ClientOnly from '@/components/ui/ClientOnly';
 
 export default function LoginPage() {
   return (
@@ -12,7 +16,11 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold tracking-tight">EV SaaS Platform</h1>
           <h2 className="mt-2 text-xl font-semibold text-muted-foreground">Admin Portal</h2>
         </div>
-        <LoginForm />
+        <Suspense fallback={<div>Loading...</div>}>
+          <ClientOnly>
+            <LoginForm />
+          </ClientOnly>
+        </Suspense>
       </div>
     </div>
   );

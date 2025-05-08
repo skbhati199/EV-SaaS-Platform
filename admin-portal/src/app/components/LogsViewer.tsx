@@ -177,7 +177,7 @@ const LogsViewer: React.FC<LogsViewerProps> = ({
       >
         {logs.length === 0 && !isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No logs to display. Click "Load Logs" to fetch logs.</p>
+            <p className="text-gray-500">No logs to display. Click &quot;Load Logs&quot; to fetch logs.</p>
           </div>
         ) : (
           <table className="min-w-full divide-y divide-gray-200">
