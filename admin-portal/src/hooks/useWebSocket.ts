@@ -33,8 +33,12 @@ export const useWebSocket = (options: WebSocketOptions = {}) => {
 
   // Initialize connection
   const connect = useCallback(() => {
-    // Create a new STOMP client over SockJS
-    const socket = new SockJS(`${API_URL}/ws`);
+    // Use secure WebSocket connection with dynamic protocol detection
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const baseUrl = API_URL.replace(/^https?:\/\//, ''); // Remove http:// or https://
+    const wsUrl = `${protocol}//${baseUrl}/ws`;
+    
+    const socket = new SockJS(wsUrl);
     const client = new Client({
       webSocketFactory: () => socket,
       debug: function (str) {

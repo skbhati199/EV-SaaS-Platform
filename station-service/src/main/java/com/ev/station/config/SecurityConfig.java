@@ -3,7 +3,6 @@ package com.ev.station.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,16 +25,25 @@ public class SecurityConfig {
     private String jwtSecret;
 
     @Bean
-    @Profile("!local && !docker")
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
+                // WebSocket endpoints are not secured
+                .requestMatchers("/ocpp/**").permitAll()
+                .requestMatchers("/ws/ocpp/**").permitAll()
+                // H2 Console
+                .requestMatchers("/h2-console/**").permitAll()
+                // Heartbeat endpoints (station and EVSE)
+                .requestMatchers("/api/v1/stations/*/heartbeat/**").permitAll()
                 .requestMatchers("/api/v1/evse/heartbeat/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                // Swagger/OpenAPI docs
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/swagger-ui.html").permitAll()
+                // Actuator endpoints
+                .requestMatchers("/actuator/**").permitAll()
+                // All other endpoints require authentication
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -43,22 +51,9 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            );
-            
-        return http.build();
-    }
-    
-    @Bean
-    @Profile("local || docker")
-    public SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll()
             )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            );
+            // Required for H2 Console
+            .headers(headers -> headers.frameOptions().disable());
             
         return http.build();
     }

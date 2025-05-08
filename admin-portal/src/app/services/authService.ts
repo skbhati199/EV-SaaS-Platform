@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import safeLocalStorage from './localStorage';
 
 // Use API URL with proper versioning to match Nginx config
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -151,7 +152,7 @@ export const authService = {
   async validateToken(token?: string): Promise<boolean> {
     try {
       // If no token is provided, check localStorage
-      const savedToken = token || localStorage.getItem('accessToken');
+      const savedToken = token || safeLocalStorage.getItem('accessToken');
       if (!savedToken) return false;
       
       const response = await axios.get(`${API_V1_URL}/auth/validate?token=${savedToken}`);
@@ -187,7 +188,7 @@ export const authService = {
   // Two-Factor Authentication
   async setup2FA(): Promise<TwoFactorSetupResponse> {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = safeLocalStorage.getItem('accessToken');
       const response = await axios.post(
         `${API_V1_URL}/auth/2fa/setup`,
         {},
@@ -205,7 +206,7 @@ export const authService = {
 
   async enable2FA(secret: string, code: string): Promise<boolean> {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = safeLocalStorage.getItem('accessToken');
       const response = await axios.post(
         `${API_V1_URL}/auth/2fa/enable`,
         { secret, code },
@@ -229,9 +230,9 @@ export const authService = {
       );
       
       if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+        safeLocalStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
+          safeLocalStorage.setItem('refreshToken', response.data.refreshToken);
         }
       }
       
@@ -243,7 +244,7 @@ export const authService = {
 
   async disable2FA(): Promise<void> {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = safeLocalStorage.getItem('accessToken');
       await axios.post(
         `${API_V1_URL}/auth/2fa/disable`,
         {},
@@ -260,20 +261,19 @@ export const authService = {
   
   // Utility function to save tokens
   saveTokens(accessToken: string, refreshToken: string): void {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    safeLocalStorage.setItem('accessToken', accessToken);
+    safeLocalStorage.setItem('refreshToken', refreshToken);
   },
   
   // Utility function to get stored tokens
   getAccessToken(): string | null {
-    return localStorage.getItem('accessToken');
+    return safeLocalStorage.getItem('accessToken');
   },
   
   // Logout
   logout(): void {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('auth-storage');
+    safeLocalStorage.removeItem('accessToken');
+    safeLocalStorage.removeItem('refreshToken');
   }
 };
 

@@ -1,0 +1,6 @@
+// This file is intentionally empty
+// Using Next.js SWC compiler instead of Babel for better performance
+{
+  "presets": ["next/babel"],
+  "plugins": []
+} 

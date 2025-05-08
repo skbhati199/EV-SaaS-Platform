@@ -24,21 +24,25 @@ public class ChargingStationController {
     private final ChargingStationService stationService;
     
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<List<ChargingStationDto>> getAllStations() {
         return ResponseEntity.ok(stationService.getAllStations());
     }
     
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<ChargingStationDto> getStationById(@PathVariable UUID id) {
         return ResponseEntity.ok(stationService.getStationById(id));
     }
     
     @GetMapping("/serial/{serialNumber}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<ChargingStationDto> getStationBySerialNumber(@PathVariable String serialNumber) {
         return ResponseEntity.ok(stationService.getStationBySerialNumber(serialNumber));
     }
     
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<List<ChargingStationDto>> getStationsByStatus(@PathVariable StationStatus status) {
         return ResponseEntity.ok(stationService.getStationsByStatus(status));
     }
@@ -50,6 +54,7 @@ public class ChargingStationController {
     }
     
     @GetMapping("/nearby")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CPO', 'EMSP')")
     public ResponseEntity<List<ChargingStationDto>> getStationsNearLocation(
             @RequestParam Double latitude,
             @RequestParam Double longitude,
@@ -79,6 +84,7 @@ public class ChargingStationController {
     }
     
     @PostMapping("/{id}/heartbeat")
+    // No security on heartbeat endpoint since it's used by stations
     public ResponseEntity<ChargingStationDto> processHeartbeat(
             @PathVariable UUID id,
             @Valid @RequestBody HeartbeatRequest request) {

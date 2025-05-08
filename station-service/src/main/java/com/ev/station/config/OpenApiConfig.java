@@ -29,15 +29,15 @@ public class OpenApiConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("EV SaaS Platform Team")
-                                .email("contact@evplatform.com")
-                                .url("https://www.evplatform.com"))
+                                .email("contact@nbevc.com")
+                                .url("https://www.nbevc.com"))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
                 .servers(List.of(
                         new Server().url("/").description("Current Server"),
                         new Server().url("http://localhost:8082").description("Local Development"),
-                        new Server().url("http://localhost:8080/station-service").description("API Gateway")))
+                        new Server().url("http://localhost:80/station-service").description("API Gateway")))
                 .components(new Components()
                         .addSecuritySchemes("bearer-jwt", 
                                 new SecurityScheme()

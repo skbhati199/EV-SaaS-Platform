@@ -1,0 +1,12 @@
+[install]
+exact = true
+production = false
+
+[test]
+coverage = true
+
+[dev]
+port = 3000
+
+[build]
+minify = true 
