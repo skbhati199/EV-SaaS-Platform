@@ -4,6 +4,8 @@ import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
 import com.ev.auth.dto.UserResponse;
 
+import java.util.UUID;
+
 /**
  * Service for user authentication and registration
  */
@@ -23,4 +25,11 @@ public interface AuthService {
      * @return Authentication tokens
      */
     TokenResponse login(String email, String password);
+    
+    /**
+     * Extract user ID from JWT token
+     * @param token JWT token
+     * @return User ID
+     */
+    UUID getUserIdFromToken(String token);
 }

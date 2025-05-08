@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,98 +25,84 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final KeycloakService keycloakService;
-    private final TwoFactorAuthService twoFactorAuthService;
-    
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
+
     @Override
     @Transactional
     public UserResponse registerUser(RegisterRequest request) {
-        // Validate input
+        log.info("Registering new user with email: {}", request.getEmail());
         validateRegistrationRequest(request);
         
-        // Create user in Keycloak
-        String userId = keycloakService.createUser(request);
-        
-        // Create user in the local database
+        // Create user entity
         User user = User.builder()
                 .username(request.getEmail())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .role(Role.valueOf(request.getRole())) // Convert String to Role enum
+                .role(Role.valueOf(request.getRole()))
                 .enabled(true)
+                .accountNonExpired(true)
+                .accountNonLocked(true)
+                .credentialsNonExpired(true)
                 .build();
         
+        // Save to database
         User savedUser = userRepository.save(user);
-        log.info("User registered with ID: {}", savedUser.getId());
+        log.info("User registered successfully with ID: {}", savedUser.getId());
         
-        return mapUserToResponse(savedUser);
+        // Return user response
+        return mapToUserResponse(savedUser);
     }
     
     @Override
+    @Transactional
     public TokenResponse login(String email, String password) {
-        // Find user by email
-        User user = userRepository.findByEmail(email)
+        log.info("Login attempt for user: {}", email);
+        
+        User user = userRepository.findByUsername(email)
                 .orElseThrow(() -> new AuthenticationException("Invalid credentials"));
         
-        // Check if user is active
-        if (!user.isEnabled()) {
-            throw new AuthenticationException("Account is disabled");
-        }
-        
-        // Validate password
+        // Check password
         if (!passwordEncoder.matches(password, user.getPassword())) {
+            log.warn("Invalid password for user: {}", email);
             throw new AuthenticationException("Invalid credentials");
         }
         
-        // Get tokens from Keycloak
-        return keycloakService.getTokens(email, password);
-    }
-    
-    // Additional login method that handles 2FA (not required by interface)
-    public TokenResponse loginWith2FA(LoginRequest request, String totpCode) {
-        // Find user by email
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AuthenticationException("Invalid credentials"));
-        
-        // Check if user is active
+        // Check if account is enabled
         if (!user.isEnabled()) {
+            log.warn("Account disabled for user: {}", email);
             throw new AuthenticationException("Account is disabled");
         }
         
-        // Validate password
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new AuthenticationException("Invalid credentials");
-        }
+        // Generate access token 
+        String accessToken = jwtService.generateToken(user);
         
-        // Check if 2FA is enabled
-        if (user.getTwoFactorAuth() != null && user.getTwoFactorAuth().isEnabled()) {
-            // If 2FA code is provided, validate it
-            if (totpCode == null) {
-                throw new AuthenticationException("2FA code required");
-            }
-            
-            boolean isValid = twoFactorAuthService.validate(request.getEmail(), totpCode);
-            
-            if (!isValid) {
-                throw new AuthenticationException("Invalid 2FA code");
-            }
-        }
+        // Create refresh token and store in database via RefreshTokenService
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId().toString());
         
-        // Get tokens from Keycloak
-        return keycloakService.getTokens(request.getEmail(), request.getPassword());
+        log.info("User logged in successfully: {}", email);
+        
+        return TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(3600) // 1 hour in seconds
+                .build();
     }
     
-    private UserResponse mapUserToResponse(User user) {
+    private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
+                .username(user.getUsername())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .role(user.getRole().name()) // Convert Role enum to String
+                .role(user.getRole().name())
                 .active(user.isEnabled())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
     
@@ -137,6 +124,17 @@ public class AuthServiceImpl implements AuthService {
             Role.valueOf(request.getRole());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Invalid role: " + request.getRole());
+        }
+    }
+
+    @Override
+    public UUID getUserIdFromToken(String token) {
+        try {
+            // Use JwtService to extract user ID
+            return jwtService.extractUserId(token);
+        } catch (Exception e) {
+            log.error("Error extracting user ID from token", e);
+            throw new RuntimeException("Invalid token");
         }
     }
 }

@@ -19,6 +19,9 @@ public class UserResponse {
     @Schema(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
     private UUID id;
     
+    @Schema(description = "Username (usually email)", example = "user@example.com")
+    private String username;
+    
     @Schema(description = "User email address", example = "user@example.com")
     private String email;
     
@@ -36,4 +39,7 @@ public class UserResponse {
     
     @Schema(description = "Timestamp when user was created", example = "2023-01-01T12:00:00")
     private LocalDateTime createdAt;
+    
+    @Schema(description = "Timestamp when user was last updated", example = "2023-01-01T12:00:00")
+    private LocalDateTime updatedAt;
 }

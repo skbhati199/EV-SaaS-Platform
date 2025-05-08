@@ -218,6 +218,7 @@ services:
       - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
+      - JWT_SECRET=development_secret
       - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs

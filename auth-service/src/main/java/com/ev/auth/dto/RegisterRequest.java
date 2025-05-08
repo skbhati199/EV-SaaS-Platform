@@ -34,7 +34,6 @@ public class RegisterRequest {
     @NotBlank(message = "Last name is required")
     private String lastName;
     
-    private List<String> roles;
-    
+    @NotBlank(message = "Role is required")
     private String role;
 }
