@@ -11,6 +11,7 @@ fi
 
 TUNNEL_TOKEN=$1
 
+
 # Extract the TUNNEL_ID from the token (first part before the first dot)
 TUNNEL_ID=$(echo $TUNNEL_TOKEN | cut -d. -f1)
 echo "Tunnel ID: $TUNNEL_ID"
