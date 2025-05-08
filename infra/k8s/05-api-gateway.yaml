@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: ev-saas/api-gateway:latest
+        image: ev-saas-platform-api-gateway:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

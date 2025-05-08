@@ -38,8 +38,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/auth-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-auth-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -90,8 +90,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # Billing Service
 apiVersion: v1
@@ -132,8 +130,8 @@ spec:
     spec:
       containers:
       - name: billing-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/billing-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-billing-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -179,8 +177,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # Station Service
 apiVersion: v1
@@ -221,8 +217,8 @@ spec:
     spec:
       containers:
       - name: station-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/station-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-station-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -270,8 +266,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # User Service
 apiVersion: v1
@@ -312,8 +306,8 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/user-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-user-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -359,8 +353,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # Notification Service
 apiVersion: v1
@@ -401,8 +393,8 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/notification-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-notification-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -448,8 +440,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # Roaming Service
 apiVersion: v1
@@ -490,8 +480,8 @@ spec:
     spec:
       containers:
       - name: roaming-service
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/roaming-service:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-roaming-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -542,8 +532,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret
 ---
 # Smart Charging Service
 apiVersion: v1
@@ -584,8 +572,8 @@ spec:
     spec:
       containers:
       - name: smart-charging
-        image: ghcr.io/${GITHUB_OWNER}/ev-saas-platform/smart-charging:latest
-        imagePullPolicy: Always
+        image: ev-saas-platform-smart-charging:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
@@ -630,6 +618,4 @@ spec:
             cpu: "200m"
           limits:
             memory: "1Gi"
-            cpu: "500m"
-      imagePullSecrets:
-      - name: github-registry-secret 
+            cpu: "500m" 
