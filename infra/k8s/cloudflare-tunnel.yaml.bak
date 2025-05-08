@@ -15,7 +15,7 @@ metadata:
   namespace: ev-saas
 data:
   config.yaml: |
-    tunnel: 81810f9b-15e9-4579-8ab8-8f4e7b7c9c68  # Replace with your actual tunnel ID
+    tunnel: ${TUNNEL_ID}  # Replace with your actual tunnel ID
     credentials-file: /etc/cloudflared/credentials.json
     loglevel: info
     ingress:
