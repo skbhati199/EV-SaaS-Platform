@@ -108,7 +108,7 @@ public class AuthController {
         log.info("Token refresh request received");
         
         try {
-            // Validate the refresh token
+            // Validate the refresh token and get user ID
             String userId = refreshTokenService.validateRefreshToken(refreshToken);
             
             // Find user in database
@@ -117,9 +117,10 @@ public class AuthController {
             
             // Generate new tokens
             String accessToken = jwtService.generateToken(user);
-            String newRefreshToken = refreshTokenService.createRefreshToken(userId);
             
-            // Revoke the old refresh token
+            // Optionally create a new refresh token and revoke the old one for added security
+            // Comment out these lines if you want to keep using the same refresh token
+            String newRefreshToken = refreshTokenService.createRefreshToken(userId);
             refreshTokenService.revokeRefreshToken(refreshToken);
             
             log.info("Tokens refreshed successfully for user: {}", user.getEmail());
@@ -130,9 +131,9 @@ public class AuthController {
                 .tokenType("Bearer")
                 .expiresIn(3600) // 1 hour in seconds
                 .build());
-        } catch (TokenRefreshException e) {
+        } catch (Exception e) {
             log.error("Error refreshing token: {}", e.getMessage());
-            throw e;
+            throw new TokenRefreshException(refreshToken, "Failed to refresh token: " + e.getMessage());
         }
     }
     

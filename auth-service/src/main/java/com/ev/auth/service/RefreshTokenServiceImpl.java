@@ -32,23 +32,29 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     public String createRefreshToken(String userId) {
         log.info("Creating refresh token for user ID: {}", userId);
         
-        User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-        
-        // Generate JWT refresh token
-        String jwtRefreshToken = jwtService.generateRefreshToken(user);
-        
-        // Store the token in the database
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .token(jwtRefreshToken)
-                .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
-                .build();
-        
-        refreshTokenRepository.save(refreshToken);
-        log.info("Refresh token created successfully for user ID: {}", userId);
-        
-        return jwtRefreshToken;
+        try {
+            User user = userRepository.findById(UUID.fromString(userId))
+                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+            
+            // Generate JWT refresh token
+            String jwtRefreshToken = jwtService.generateRefreshToken(user);
+            
+            // Store the token in the database
+            RefreshToken refreshToken = RefreshToken.builder()
+                    .user(user)
+                    .token(jwtRefreshToken)
+                    .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
+                    .revoked(false)
+                    .build();
+            
+            refreshTokenRepository.save(refreshToken);
+            log.info("Refresh token created successfully for user ID: {}", userId);
+            
+            return jwtRefreshToken;
+        } catch (Exception e) {
+            log.error("Error creating refresh token: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create refresh token: " + e.getMessage(), e);
+        }
     }
     
     @Override
@@ -70,13 +76,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             throw new TokenRefreshException(token, "Refresh token was revoked");
         }
         
-        // Also validate with JWT service to ensure token signature is valid
-        try {
-            UUID userId = jwtService.extractUserId(token);
-            return userId.toString();
-        } catch (Exception e) {
-            throw new TokenRefreshException(token, "Invalid JWT refresh token");
-        }
+        // Return user ID from the token stored in database
+        return refreshToken.getUser().getId().toString();
     }
     
     @Override

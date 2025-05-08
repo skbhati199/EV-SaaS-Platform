@@ -26,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional
@@ -56,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
     }
     
     @Override
+    @Transactional
     public TokenResponse login(String email, String password) {
         log.info("Login attempt for user: {}", email);
         
@@ -74,9 +76,11 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthenticationException("Account is disabled");
         }
         
-        // Generate tokens using JwtService instead of Keycloak
+        // Generate access token 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        
+        // Create refresh token and store in database via RefreshTokenService
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId().toString());
         
         log.info("User logged in successfully: {}", email);
         
