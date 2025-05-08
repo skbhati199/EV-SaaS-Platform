@@ -253,6 +253,43 @@ export const billingService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // Payment Gateway Integration
+  async initiatePayment(token: string, data: { 
+    amount: number; 
+    currency: string; 
+    provider: string; 
+    description?: string; 
+    metadata?: Record<string, any>;
+  }): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/payments/initiate`, 
+        data, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async verifyRazorpayPayment(token: string, data: {
+    paymentId: string;
+    orderId: string;
+    signature: string;
+  }): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/billing/payments/verify/razorpay`, 
+        data, 
+        this.getAuthHeader(token)
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

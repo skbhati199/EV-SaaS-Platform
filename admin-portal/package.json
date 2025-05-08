@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:production": "NEXT_DISABLE_ESLINT=1 next build",
     "start": "next start",
     "lint": "next lint",
     "bun:dev": "bun --bun run next dev",
     "bun:build": "bun --bun run next build",
+    "bun:build:production": "NEXT_DISABLE_ESLINT=1 bun --bun run next build",
     "bun:start": "bun --bun run next start"
   },
   "dependencies": {

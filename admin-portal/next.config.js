@@ -26,18 +26,9 @@ const nextConfig = {
   
   // Disable automatic static optimization for paths that need browser APIs
   // This tells Next.js not to statically optimize these pages at build time
-  unstable_disableStaticImages: true,
   trailingSlash: true,
 
   // Disable SSR for problematic pages
-  async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
-
   // Better error handling
   onDemandEntries: {
     // period (in ms) where the server will keep pages in the buffer

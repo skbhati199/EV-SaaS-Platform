@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Script from 'next/script';
 import { billingService } from '@/app/services';
+import safeLocalStorage from '@/app/services/localStorage';
 
 declare global {
   interface Window {
@@ -75,8 +76,14 @@ export const processPayment = async (
   onError?: (error: any) => void
 ) => {
   try {
+    // Get authentication token
+    const token = safeLocalStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
     // Initiate payment with Razorpay as the provider
-    const paymentResponse = await billingService.initiatePayment({
+    const paymentResponse = await billingService.initiatePayment(token, {
       amount,
       currency,
       provider: 'RAZORPAY',
@@ -100,7 +107,7 @@ export const processPayment = async (
       async (response) => {
         // Verify payment
         try {
-          const invoice = await billingService.verifyRazorpayPayment({
+          const invoice = await billingService.verifyRazorpayPayment(token, {
             paymentId: response.razorpay_payment_id,
             orderId: response.razorpay_order_id,
             signature: response.razorpay_signature

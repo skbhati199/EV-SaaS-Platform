@@ -281,6 +281,22 @@
   resolved "https://registry.npmjs.org/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
+"@emnapi/core@^1.4.0":
+  version "1.4.3"
+  dependencies:
+    "@emnapi/wasi-threads" "1.0.2"
+    tslib "^2.4.0"
+
+"@emnapi/runtime@^1.4.0":
+  version "1.4.3"
+  dependencies:
+    tslib "^2.4.0"
+
+"@emnapi/wasi-threads@1.0.2":
+  version "1.0.2"
+  dependencies:
+    tslib "^2.4.0"
+
 "@esbuild/darwin-x64@0.25.3":
   version "0.25.3"
   resolved "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.25.3.tgz"
@@ -1362,6 +1378,11 @@
 "@tanstack/virtual-core@3.13.6":
   version "3.13.6"
 
+"@tybys/wasm-util@^0.9.0":
+  version "0.9.0"
+  dependencies:
+    tslib "^2.4.0"
+
 "@types/babel__core@^7.1.14":
   version "7.20.5"
   resolved "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz"
@@ -1529,6 +1550,11 @@
     "@types/prop-types" "*"
     csstype "^3.0.2"
 
+"@types/sockjs-client@^1.5.4":
+  version "1.5.4"
+  resolved "https://registry.npmjs.org/@types/sockjs-client/-/sockjs-client-1.5.4.tgz"
+  integrity sha512-zk+uFZeWyvJ5ZFkLIwoGA/DfJ+pYzcZ8eH4H/EILCm2OBZyHH6Hkdna1/UWL/CFruh5wj6ES7g75SvUB0VsH5w==
+
 "@types/stack-utils@^2.0.0":
   version "2.0.3"
   resolved "https://registry.npmjs.org/@types/stack-utils/-/stack-utils-2.0.3.tgz"
@@ -1691,6 +1717,7 @@ acorn-jsx@^5.3.2:
     date-fns "^2.30.0"
     embla-carousel-react "^8.6.0"
     input-otp "^1.4.2"
+    jwt-decode "^4.0.0"
     lucide-react "^0.507.0"
     next "14.2.28"
     next-themes "^0.4.6"
@@ -2050,6 +2077,13 @@ buffer-from@^1.0.0:
   version "1.1.2"
   resolved "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz"
   integrity sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==
+
+bun-types@latest:
+  version "1.2.12"
+  resolved "https://registry.npmjs.org/bun-types/-/bun-types-1.2.12.tgz"
+  integrity sha512-tvWMx5vPqbRXgE8WUZI94iS1xAYs8bkqESR9cxBB1Wi+urvfTrF1uzuDgBHFAdO0+d2lmsbG3HmeKMvUyj6pWA==
+  dependencies:
+    "@types/node" "*"
 
 bundle-require@^5.1.0:
   version "5.1.0"
@@ -4689,12 +4723,12 @@ picocolors@^1.0.0, picocolors@^1.1.1:
   resolved "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
   integrity sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==
 
-picomatch@^2.0.4, picomatch@^2.2.1, picomatch@^2.2.3, picomatch@^2.3.1:
+picomatch@^2.0.4, picomatch@^2.2.1, picomatch@^2.2.3, picomatch@^2.3.1, "picomatch@^3 || ^4":
   version "2.3.1"
   resolved "https://registry.npmjs.org/picomatch/-/picomatch-2.3.1.tgz"
   integrity sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==
 
-"picomatch@^3 || ^4", picomatch@^4.0.2:
+picomatch@^4.0.2:
   version "4.0.2"
   resolved "https://registry.npmjs.org/picomatch/-/picomatch-4.0.2.tgz"
   integrity sha512-M7BAV6Rlcy5u+m6oPhAPFgJTzAioX/6B0DxyvDlo9l8+T3nLKbrczg2WLUyzd45L8RqfUMyGPzekbMvX2Ldkwg==
