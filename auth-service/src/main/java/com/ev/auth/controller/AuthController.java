@@ -5,8 +5,13 @@ import com.ev.auth.dto.LoginResponse;
 import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
 import com.ev.auth.dto.UserResponse;
+import com.ev.auth.exception.AuthenticationException;
+import com.ev.auth.exception.TokenRefreshException;
+import com.ev.auth.model.User;
+import com.ev.auth.repository.UserRepository;
 import com.ev.auth.service.AuthService;
-import com.ev.auth.service.KeycloakService;
+import com.ev.auth.service.JwtService;
+import com.ev.auth.service.RefreshTokenService;
 import com.ev.auth.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,8 +38,10 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
-    private final KeycloakService keycloakService;
+    private final JwtService jwtService;
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService;
     
     @PostMapping("/register")
     @Operation(
@@ -99,8 +106,34 @@ public class AuthController {
             @Parameter(description = "Refresh token", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestParam String refreshToken) {
         log.info("Token refresh request received");
-        TokenResponse tokenResponse = keycloakService.refreshToken(refreshToken);
-        return ResponseEntity.ok(tokenResponse);
+        
+        try {
+            // Validate the refresh token
+            String userId = refreshTokenService.validateRefreshToken(refreshToken);
+            
+            // Find user in database
+            User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new TokenRefreshException(refreshToken, "User not found"));
+            
+            // Generate new tokens
+            String accessToken = jwtService.generateToken(user);
+            String newRefreshToken = refreshTokenService.createRefreshToken(userId);
+            
+            // Revoke the old refresh token
+            refreshTokenService.revokeRefreshToken(refreshToken);
+            
+            log.info("Tokens refreshed successfully for user: {}", user.getEmail());
+            
+            return ResponseEntity.ok(TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(newRefreshToken)
+                .tokenType("Bearer")
+                .expiresIn(3600) // 1 hour in seconds
+                .build());
+        } catch (TokenRefreshException e) {
+            log.error("Error refreshing token: {}", e.getMessage());
+            throw e;
+        }
     }
     
     @GetMapping("/validate")
@@ -117,7 +150,47 @@ public class AuthController {
             @Parameter(description = "JWT token to validate", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
             @RequestParam String token) {
         log.info("Token validation request received");
-        boolean isValid = keycloakService.validateToken(token);
+        
+        // Validate token using jwtService
+        boolean isValid = false;
+        
+        try {
+            // Extract user ID from token
+            UUID userId = jwtService.extractUserId(token);
+            
+            // Verify token is not expired
+            isValid = !jwtService.isTokenExpired(token);
+            
+            log.info("Token validation result: {}", isValid);
+        } catch (Exception e) {
+            log.error("Error validating token: {}", e.getMessage());
+        }
+        
         return ResponseEntity.ok(isValid);
+    }
+    
+    @PostMapping("/logout")
+    @Operation(
+        summary = "Logout user",
+        description = "Revokes the user's refresh token",
+        tags = {"Authentication"}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Logged out successfully"),
+        @ApiResponse(responseCode = "401", description = "Invalid refresh token")
+    })
+    public ResponseEntity<Void> logout(
+            @Parameter(description = "Refresh token", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+            @RequestParam String refreshToken) {
+        log.info("Logout request received");
+        
+        try {
+            refreshTokenService.revokeRefreshToken(refreshToken);
+            log.info("User logged out successfully");
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Error during logout: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

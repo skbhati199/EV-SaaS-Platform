@@ -28,7 +28,9 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
-
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +43,8 @@ import java.util.Arrays;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-    private String jwkSetUri;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
     
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -80,7 +82,8 @@ public class SecurityConfig {
                     "/api/v1/auth/login",
                     "/api/v1/auth/refresh",
                     "/api/v1/auth/validate",
-                    "/api/v1/hello"
+                    "/api/v1/hello",
+                    "/api/v1/health"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -93,12 +96,13 @@ public class SecurityConfig {
     
     @Bean
     public JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-        // Skip issuer validation
-        OAuth2TokenValidator<Jwt> withoutIssuer = new DelegatingOAuth2TokenValidator<>(
-            new JwtTimestampValidator()
-        );
-        jwtDecoder.setJwtValidator(withoutIssuer);
+        byte[] keyBytes = jwtSecret.getBytes();
+        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).build();
+        OAuth2TokenValidator<Jwt> validator = new JwtTimestampValidator();
+        jwtDecoder.setJwtValidator(validator);
+        
         return jwtDecoder;
     }
     
@@ -114,14 +118,12 @@ public class SecurityConfig {
         return new Converter<Jwt, Collection<GrantedAuthority>>() {
             @Override
             public Collection<GrantedAuthority> convert(Jwt jwt) {
-                Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+                @SuppressWarnings("unchecked")
+                List<String> roles = jwt.getClaimAsStringList("roles");
                 
-                if (realmAccess == null || !realmAccess.containsKey("roles")) {
+                if (roles == null) {
                     return List.of();
                 }
-                
-                @SuppressWarnings("unchecked")
-                List<String> roles = (List<String>) realmAccess.get("roles");
                 
                 return roles.stream()
                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))

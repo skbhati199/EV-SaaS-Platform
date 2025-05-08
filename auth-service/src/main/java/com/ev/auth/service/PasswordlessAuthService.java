@@ -1,6 +1,8 @@
 package com.ev.auth.service;
 
 import com.ev.auth.dto.TokenResponse;
+import com.ev.auth.model.User;
+import com.ev.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class PasswordlessAuthService {
 
-    private final KeycloakService keycloakService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
     private final Map<String, PasswordlessRequest> pendingRequests = new ConcurrentHashMap<>();
     
     @Value("${app.passwordless.token-expiration-minutes}")
@@ -25,12 +28,12 @@ public class PasswordlessAuthService {
     
     private static class PasswordlessRequest {
         private final String token;
-        private final String userId;
+        private final String email;
         private final LocalDateTime expiresAt;
         
-        public PasswordlessRequest(String token, String userId, LocalDateTime expiresAt) {
+        public PasswordlessRequest(String token, String email, LocalDateTime expiresAt) {
             this.token = token;
-            this.userId = userId;
+            this.email = email;
             this.expiresAt = expiresAt;
         }
         
@@ -46,31 +49,24 @@ public class PasswordlessAuthService {
      * @return A token for passwordless authentication
      */
     public String generatePasswordlessRequest(String email) {
-        try {
-            // Create a secure token
-            String token = generateSecureToken();
-            
-            // Get the user ID from Keycloak
-            // This is a simplification - in a real implementation, you would need to query Keycloak for the user ID
-            String userId = "user-id"; // Replace with actual Keycloak user ID lookup
-            
-            // Store the request
-            LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(tokenExpirationMinutes);
-            pendingRequests.put(token, new PasswordlessRequest(token, userId, expiresAt));
-            
-            log.info("Generated passwordless login request for email: {}", email);
-            return token;
-        } catch (Exception e) {
-            log.error("Error generating passwordless login request", e);
-            throw new RuntimeException("Failed to generate passwordless login request", e);
-        }
+        // Generate a secure token
+        String token = generateSecureToken();
+        
+        // Store the token with an expiration time
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(tokenExpirationMinutes);
+        PasswordlessRequest request = new PasswordlessRequest(token, email, expiresAt);
+        pendingRequests.put(token, request);
+        
+        log.info("Generated passwordless login token for email: {}", email);
+        
+        return token;
     }
     
     /**
-     * Validate a passwordless authentication token and authenticate the user
+     * Authenticate a user with a passwordless token
      * 
      * @param token The passwordless token
-     * @return Authentication tokens if the token is valid
+     * @return Authentication tokens
      */
     public TokenResponse authenticateWithToken(String token) {
         // Get and remove the request
@@ -86,14 +82,23 @@ public class PasswordlessAuthService {
             throw new RuntimeException("Token has expired");
         }
         
-        // Authenticate the user
-        // In a real implementation, you would use Keycloak's client credentials flow or similar
-        // to authenticate the user without a password
+        // Find the user by email
+        User user = userRepository.findByEmail(request.email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Generate JWT tokens
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
         
         log.info("User authenticated with passwordless token: {}", token);
         
-        // For now, we'll simulate token generation
-        return new TokenResponse("simulated-access-token", "simulated-refresh-token");
+        // Return tokens
+        return TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(3600) // 1 hour in seconds
+                .build();
     }
     
     /**

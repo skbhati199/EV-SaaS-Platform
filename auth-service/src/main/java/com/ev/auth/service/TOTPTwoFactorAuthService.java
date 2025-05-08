@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,66 +28,60 @@ import java.util.Map;
 public class TOTPTwoFactorAuthService implements TwoFactorAuthService {
 
     private final SecretGenerator secretGenerator;
-    private final KeycloakService keycloakService;
+    private final CodeGenerator codeGenerator;
+    private final CodeVerifier codeVerifier;
+    private final QrGenerator qrGenerator;
     
     @Value("${app.2fa.issuer:EVSaaS}")
     private String issuer;
     
     @Override
     public boolean validate(String username, String code) {
-        // In a real application, we would retrieve the user's secret from storage
-        // and validate the code against it
+        // Implement using in-memory storage or database for development
+        // In a production environment, implement secure storage for secrets
+        Map<String, String> userSecrets = getUserSecrets();
+        String secret = userSecrets.get(username);
         
-        // This is a simplified implementation
-        // For actual implementation, use securely stored secrets
+        if (secret == null) {
+            log.warn("No secret found for user: {}", username);
+            return false;
+        }
         
-        // For now, we'll return true to allow the authentication flow to continue
-        return true;
+        return validateCode(code, secret);
+    }
+    
+    /**
+     * Validate a TOTP code against a secret
+     * 
+     * @param code The code to validate
+     * @param secret The secret
+     * @return True if valid
+     */
+    public boolean validateCode(String code, String secret) {
+        return codeVerifier.isValidCode(secret, code);
     }
     
     @Override
     public String generateSecret(String username) {
         String secret = secretGenerator.generate();
         log.info("Generated TOTP secret for user: {}", username);
+        
+        // Store the secret in memory for development
+        // In a production environment, implement secure storage for secrets
+        Map<String, String> userSecrets = getUserSecrets();
+        userSecrets.put(username, secret);
+        
         return secret;
     }
     
     /**
-     * Generate a secret for two-factor authentication
+     * Generate a QR code for TOTP
      * 
-     * @param userId The user ID
      * @param username The username
-     * @return The generated secret
+     * @param secret The secret
+     * @return The QR code as a data URI
      */
-    public String generateSecret(String userId, String username) {
-        String secret = secretGenerator.generate();
-        log.info("Generated TOTP secret for user: {} with ID: {}", username, userId);
-        return secret;
-    }
-    
-    @Override
-    public boolean enable(String username) {
-        // In a real application, you would:
-        // 1. Generate a secret if not already done
-        // 2. Store the secret securely, associated with the user
-        // 3. Mark the user as having 2FA enabled
-        
-        log.info("Enabled TOTP for user: {}", username);
-        return true;
-    }
-    
-    @Override
-    public boolean disable(String username) {
-        // In a real application, you would:
-        // 1. Remove the stored secret or mark it as invalid
-        // 2. Mark the user as having 2FA disabled
-        
-        log.info("Disabled TOTP for user: {}", username);
-        return true;
-    }
-    
-    @Override
-    public String getQrCodeUrl(String username, String secret) {
+    public String generateQrCode(String username, String secret) {
         QrData data = new QrData.Builder()
                 .label(username)
                 .secret(secret)
@@ -99,71 +92,69 @@ public class TOTPTwoFactorAuthService implements TwoFactorAuthService {
                 .build();
         
         try {
-            QrGenerator qrGenerator = new ZxingPngQrGenerator();
             byte[] imageData = qrGenerator.generate(data);
-            return "data:image/png;base64," + dev.samstevens.totp.util.Utils.getDataUriForImage(imageData, qrGenerator.getImageMimeType());
+            String mimeType = qrGenerator instanceof ZxingPngQrGenerator ? "image/png" : "image/jpeg";
+            String qrCodeImage = getDataUriForImage(imageData, mimeType);
+            
+            log.info("Generated QR code for user: {}", username);
+            return qrCodeImage;
         } catch (QrGenerationException e) {
             log.error("Error generating QR code", e);
-            throw new RuntimeException("Failed to generate QR code", e);
+            throw new RuntimeException("Error generating QR code", e);
         }
     }
     
-    /**
-     * Generate a QR code for two-factor authentication
-     * 
-     * @param username The username
-     * @param secret The authentication secret
-     * @return The QR code as a base64-encoded image
-     */
-    public String generateQrCode(String username, String secret) {
-        return getQrCodeUrl(username, secret);
+    @Override
+    public boolean enable(String username) {
+        // In a real implementation, mark the user as having 2FA enabled
+        // For now, we'll return true to simulate success
+        log.info("Enabled TOTP for user: {}", username);
+        return true;
+    }
+    
+    @Override
+    public boolean disable(String username) {
+        // In a real implementation, mark the user as having 2FA disabled
+        // For now, we'll return true to simulate success
+        log.info("Disabled TOTP for user: {}", username);
+        return true;
     }
     
     @Override
     public boolean verifyCode(TwoFactorAuthRequest request) {
-        return validate(request.getUsername(), request.getCode());
+        return validateCode(request.getCode(), request.getSecret());
     }
     
     /**
-     * Validate a TOTP code
+     * Get a data URI for an image
      * 
-     * @param code The code to validate
-     * @param secret The TOTP secret
-     * @return True if the code is valid
+     * @param imageData The image data
+     * @param mimeType The MIME type
+     * @return The data URI
      */
-    public boolean validateCode(String code, String secret) {
-        TimeProvider timeProvider = new SystemTimeProvider();
-        CodeGenerator codeGenerator = new DefaultCodeGenerator();
-        CodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);
-        
-        // Check if the code is valid within the current time window (with a small allowable discrepancy)
-        return verifier.isValidCode(secret, code);
+    private String getDataUriForImage(byte[] imageData, String mimeType) {
+        String encoded = java.util.Base64.getEncoder().encodeToString(imageData);
+        return "data:" + mimeType + ";base64," + encoded;
     }
     
     /**
-     * Enable TOTP for a user
+     * Get user secrets
+     * This is a simple in-memory implementation for development
+     * In a production environment, implement secure storage for secrets
      * 
-     * @param userId The user ID
-     * @param code The verification code
-     * @param secret The TOTP secret
-     * @return True if enabled successfully
+     * @return The user secrets
      */
-    public boolean enableTOTP(String userId, String code, String secret) {
-        if (!validateCode(code, secret)) {
-            log.warn("Invalid TOTP code provided for user ID: {}", userId);
-            return false;
-        }
-        
-        log.info("TOTP enabled for user ID: {}", userId);
-        return true;
+    private Map<String, String> getUserSecrets() {
+        // This should be replaced with a proper storage solution
+        // For now, we'll use a static map for demonstration
+        return TOTP_SECRETS;
     }
     
-    /**
-     * Disable TOTP for a user
-     * 
-     * @param userId The user ID
-     */
-    public void disableTOTP(String userId) {
-        log.info("TOTP disabled for user ID: {}", userId);
+    // Static map for demonstration only
+    private static final Map<String, String> TOTP_SECRETS = new HashMap<>();
+
+    @Override
+    public String getQrCodeUrl(String username, String secret) {
+        return generateQrCode(username, secret);
     }
 } 
