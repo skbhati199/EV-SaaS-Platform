@@ -12,10 +12,13 @@ import com.ev.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final KeycloakService keycloakService;
     private final TwoFactorAuthService twoFactorAuthService;
+    private final JwtDecoder jwtDecoder;
     
     @Override
     @Transactional
@@ -137,6 +141,18 @@ public class AuthServiceImpl implements AuthService {
             Role.valueOf(request.getRole());
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Invalid role: " + request.getRole());
+        }
+    }
+
+    @Override
+    public UUID getUserIdFromToken(String token) {
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            String subject = jwt.getSubject();
+            return UUID.fromString(subject);
+        } catch (Exception e) {
+            log.error("Error extracting user ID from token", e);
+            throw new RuntimeException("Invalid token");
         }
     }
 }

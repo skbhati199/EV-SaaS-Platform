@@ -1,6 +1,6 @@
 # EV SaaS Platform
 
-domain: chargingev.app
+domain: nbevc.app
 
 A comprehensive Electric Vehicle Charging Station Management Platform built with a microservices architecture using TurboRepo for monorepo management.
 

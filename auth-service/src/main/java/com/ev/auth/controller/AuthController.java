@@ -1,11 +1,13 @@
 package com.ev.auth.controller;
 
 import com.ev.auth.dto.LoginRequest;
+import com.ev.auth.dto.LoginResponse;
 import com.ev.auth.dto.RegisterRequest;
 import com.ev.auth.dto.TokenResponse;
 import com.ev.auth.dto.UserResponse;
 import com.ev.auth.service.AuthService;
 import com.ev.auth.service.KeycloakService;
+import com.ev.auth.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -30,6 +34,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final KeycloakService keycloakService;
+    private final UserService userService;
     
     @PostMapping("/register")
     @Operation(
@@ -61,10 +66,22 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid credentials"),
         @ApiResponse(responseCode = "403", description = "Account locked or disabled")
     })
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user: {}", request.getEmail());
+        
+        // Get tokens
         TokenResponse tokenResponse = authService.login(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(tokenResponse);
+        
+        // Get user info
+        UUID userId = authService.getUserIdFromToken(tokenResponse.getAccessToken());
+        UserResponse userResponse = userService.getUserById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found after login"));
+        
+        // Combine into login response
+        LoginResponse response = new LoginResponse(userResponse, tokenResponse.getAccessToken(), 
+            tokenResponse.getRefreshToken(), false);
+        
+        return ResponseEntity.ok(response);
     }
     
     @PostMapping("/refresh")
