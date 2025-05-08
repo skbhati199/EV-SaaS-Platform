@@ -12,10 +12,16 @@ resources:
   - nginx.yaml
   - cloudflare-tunnel.yaml
 
-namespace: ev-saas
+# Remove the namespace line to prevent transformation
+# namespace: ev-saas
 
 commonLabels:
   app.kubernetes.io/part-of: ev-saas-platform
+
+# Add namespace patches to apply to specific resources
+namespaceSelector:
+  exclude:
+    - path: nginx.yaml
 
 patchesStrategicMerge:
   # Add any patches here if needed 
