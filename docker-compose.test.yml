@@ -113,36 +113,6 @@ services:
     networks:
       - ev-test-network
 
-  # Keycloak for identity and access management
-  keycloak:
-    image: quay.io/keycloak/keycloak:latest
-    container_name: ev-test-keycloak
-    ports:
-      - "8080:8080"
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres:5432/evtest_db
-      - KC_DB_USERNAME=evtest
-      - KC_DB_PASSWORD=evtest_password
-    command:
-      - start-dev
-      - --import-realm
-    volumes:
-      - ./infra/keycloak/realm-import:/opt/keycloak/data/import
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - ev-test-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-
   ## Nginx Gateway
   nginx:
     image: nginx:alpine
@@ -216,8 +186,6 @@ services:
       - ./auth-service:/workspace/app  # Mount source code for testing
       - ~/.m2:/root/.m2  # Mount Maven cache for faster builds
     depends_on:
-      keycloak:
-        condition: service_started
       postgres:
         condition: service_healthy
       eureka-server:
@@ -235,18 +203,6 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
-      # Keycloak Configuration
-      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
-      - KEYCLOAK_REALM=ev-platform
-      - KEYCLOAK_RESOURCE=auth-service
-      - KEYCLOAK_SSL_REQUIRED=external
-      - KEYCLOAK_USE_RESOURCE_ROLE_MAPPINGS=true
-      - KEYCLOAK_ADMIN_USERNAME=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KEYCLOAK_CLIENT_SECRET=defaultClientSecret
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
-      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       # Swagger Configuration
       - SPRINGDOC_API_DOCS_ENABLED=true
       - SPRINGDOC_SWAGGER_UI_ENABLED=true
@@ -291,9 +247,6 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
       - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      # Keycloak Configuration
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ev-platform
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ev-platform/protocol/openid-connect/certs
       # Enable metrics and monitoring
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
     healthcheck:
@@ -787,7 +740,6 @@ services:
       - notification-service
       - scheduler-service
       - api-gateway
-      - keycloak
       - admin-portal
 
 networks:

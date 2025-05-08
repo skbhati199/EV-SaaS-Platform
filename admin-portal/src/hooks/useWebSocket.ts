@@ -33,12 +33,13 @@ export const useWebSocket = (options: WebSocketOptions = {}) => {
 
   // Initialize connection
   const connect = useCallback(() => {
-    // Use secure WebSocket connection with dynamic protocol detection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use the correct protocol for SockJS - it expects http/https, not ws/wss
+    // SockJS will automatically upgrade to WebSocket when possible
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     const baseUrl = API_URL.replace(/^https?:\/\//, ''); // Remove http:// or https://
-    const wsUrl = `${protocol}//${baseUrl}/ws`;
+    const sockjsUrl = `${protocol}//${baseUrl}/ws`;
     
-    const socket = new SockJS(wsUrl);
+    const socket = new SockJS(sockjsUrl);
     const client = new Client({
       webSocketFactory: () => socket,
       debug: function (str) {
