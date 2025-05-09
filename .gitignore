@@ -72,3 +72,7 @@ Thumbs.db
 # admin-portal/
 
 /OCPP-1.6-Chargebox-Simulator/
+
+task_manger.sh
+TASK_MANAGEMENT.md
+TASK_PROGRESS.md
