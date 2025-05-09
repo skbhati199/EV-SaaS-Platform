@@ -1,20 +1,3 @@
--- Create user table
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    role VARCHAR(50) NOT NULL,
-    enabled BOOLEAN DEFAULT TRUE,
-    account_non_expired BOOLEAN DEFAULT TRUE,
-    account_non_locked BOOLEAN DEFAULT TRUE,
-    credentials_non_expired BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
 -- Create refresh tokens table
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY,
@@ -70,7 +53,6 @@ CREATE TABLE auth_audit_logs (
 );
 
 -- Create indexes
-CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_refresh_token_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_token_token ON refresh_tokens(token);
@@ -79,4 +61,4 @@ CREATE INDEX idx_passwordless_token ON passwordless_auth(token);
 CREATE INDEX idx_passwordless_user_id ON passwordless_auth(user_id);
 CREATE INDEX idx_audit_user_id ON auth_audit_logs(user_id);
 CREATE INDEX idx_audit_event_type ON auth_audit_logs(event_type);
-CREATE INDEX idx_audit_created_at ON auth_audit_logs(created_at); 
+CREATE INDEX idx_audit_created_at ON auth_audit_logs(created_at);

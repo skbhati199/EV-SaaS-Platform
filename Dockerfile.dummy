@@ -1,0 +1,10 @@
+FROM nginx:alpine
+
+RUN mkdir -p /usr/share/nginx/html
+
+# Create a simple index.html that identifies the service
+RUN echo '<html><body><h1>EV SaaS Platform - 'user-service'</h1><p>Service is running.</p></body></html>' > /usr/share/nginx/html/index.html
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
