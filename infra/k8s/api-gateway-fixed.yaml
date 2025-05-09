@@ -86,11 +86,11 @@ metadata:
 spec:
   tls:
   - hosts:
-    - api.ev-saas.com
-    - ocpi.ev-saas.com
+    - api.nbevc.com
+    - ocpi.nbevc.com
     secretName: ev-saas-tls
   rules:
-  - host: api.ev-saas.com
+  - host: api.nbevc.com
     http:
       paths:
       - path: /
@@ -100,7 +100,7 @@ spec:
             name: api-gateway-service
             port:
               number: 8080
-  - host: ocpi.ev-saas.com
+  - host: ocpi.nbevc.com
     http:
       paths:
       - path: /
