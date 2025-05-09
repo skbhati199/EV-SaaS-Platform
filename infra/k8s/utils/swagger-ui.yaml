@@ -1,0 +1,97 @@
+# Swagger UI Configuration
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swagger-ui
+  namespace: ev-saas
+  labels:
+    app: swagger-ui
+    component: documentation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swagger-ui
+  template:
+    metadata:
+      labels:
+        app: swagger-ui
+    spec:
+      containers:
+      - name: swagger-ui
+        image: swaggerapi/swagger-ui:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SWAGGER_JSON_URL
+          value: /swagger/swagger-config.json
+        - name: BASE_URL
+          value: /swagger
+        volumeMounts:
+        - name: swagger-config
+          mountPath: /usr/share/nginx/html/swagger-config.json
+          subPath: swagger-config.json
+      volumes:
+      - name: swagger-config
+        configMap:
+          name: swagger-ui-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swagger-ui
+  namespace: ev-saas
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: swagger-ui
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swagger-ui-config
+  namespace: ev-saas
+data:
+  swagger-config.json: |
+    {
+      "urls": [
+        {
+          "name": "Auth Service API",
+          "url": "/auth/v3/api-docs/auth-service"
+        },
+        {
+          "name": "Billing Service API",
+          "url": "/billing/v3/api-docs/billing-service"
+        },
+        {
+          "name": "Notification Service API",
+          "url": "/notifications/v3/api-docs/notification-service"
+        },
+        {
+          "name": "Roaming Service API",
+          "url": "/roaming/v3/api-docs/roaming-service"
+        },
+        {
+          "name": "Station Service API",
+          "url": "/stations/v3/api-docs/station-service"
+        },
+        {
+          "name": "Scheduler Service API",
+          "url": "/scheduler/v3/api-docs/scheduler-service"
+        },
+        {
+          "name": "Smart Charging Service API",
+          "url": "/smart-charging/v3/api-docs/smart-charging-service"
+        },
+        {
+          "name": "User Service API",
+          "url": "/users/v3/api-docs/user-service"
+        }
+      ]
+    }

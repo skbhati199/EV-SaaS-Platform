@@ -1,5 +1,5 @@
-# Cloudflare Tunnel configuration
-# This file will be populated after tunnel creation
+# Cloudflare Tunnel configuration for EV SaaS Platform
+# Updated configuration with all services
 
 tunnel: 81810f9b-15e9-4579-8ab8-8f4e7b7c9c68
 credentials-file: /etc/cloudflared/credentials.json
@@ -7,29 +7,47 @@ credentials-file: /etc/cloudflared/credentials.json
 # Log level can be one of: debug, info, warn, error, fatal
 loglevel: info
 
-# Ingress rules determine which traffic should go where
+# Ingress rules for all EV SaaS Platform services
 ingress:
-  # Main web service via nginx gateway
+  # Main API Gateway
   - hostname: api.nbevc.com
-    service: http://nginx:80
+    service: http://nginx-gateway.ingress-local.svc.cluster.local:80
   
-  # Admin portal direct access
+  # Admin portal
   - hostname: console.nbevc.com
-    service: http://admin-portal:3000
-
-  # API Gateway direct access
-  # - hostname: api.nbevc.com
-    # service: http://api-gateway:8082
+    service: http://admin-portal.ev-saas.svc.cluster.local:3000
   
-  # Auth service direct access
+  # Service-specific domains
   - hostname: auth.nbevc.com
-    service: http://auth-service:8081
+    service: http://auth-service.ev-saas.svc.cluster.local:8080
   
-  # Keycloak admin access
-  - hostname: keycloak.nbevc.com
-    service: http://keycloak:8080
-    originRequest:
-      connectTimeout: 30s
+  - hostname: billing.nbevc.com
+    service: http://billing-service.ev-saas.svc.cluster.local:8083
+  
+  - hostname: notifications.nbevc.com
+    service: http://notification-service.ev-saas.svc.cluster.local:8087
+  
+  - hostname: roaming.nbevc.com
+    service: http://roaming-service.ev-saas.svc.cluster.local:8088
+  
+  - hostname: stations.nbevc.com
+    service: http://station-service.ev-saas.svc.cluster.local:8084
+  
+  - hostname: scheduler.nbevc.com
+    service: http://scheduler-service.ev-saas.svc.cluster.local:8085
+  
+  - hostname: smart-charging.nbevc.com
+    service: http://smart-charging-service.ev-saas.svc.cluster.local:8086
+  
+  - hostname: users.nbevc.com
+    service: http://user-service.ev-saas.svc.cluster.local:8082
+  
+  - hostname: discovery.nbevc.com
+    service: http://eureka-server.ev-saas.svc.cluster.local:8761
+  
+  # API Documentation
+  - hostname: docs.nbevc.com
+    service: http://swagger-ui.ev-saas.svc.cluster.local:8080
   
   # Monitoring services
   - hostname: prometheus.nbevc.com

@@ -1,0 +1,25 @@
+# EV SaaS Platform Namespaces
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ev-saas
+  labels:
+    name: ev-saas
+    part-of: ev-saas-platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ev-infra
+  labels:
+    name: ev-infra
+    part-of: ev-saas-platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-local
+  labels:
+    name: ingress-local
+    part-of: ev-saas-platform
