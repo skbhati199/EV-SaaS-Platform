@@ -1,0 +1,364 @@
+services:
+  ## Databases
+  # TimescaleDB for time-series data (charging sessions, telemetry, etc.)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: ev-saas-timescaledb
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_USER: evsaas
+      POSTGRES_PASSWORD: evsaas_password
+      POSTGRES_DB: evsaas_timeseries_db
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/timescaledb:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evsaas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Regular PostgreSQL for user data, auth, billing, etc.
+  postgres:
+    image: postgres:14-alpine
+    container_name: ev-saas-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: evsaas
+      POSTGRES_PASSWORD: evsaas_password
+      POSTGRES_DB: evsaas_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init/postgres:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evsaas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin for PostgreSQL management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ev-saas-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@evplatform.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    networks:
+      - ev-network
+    depends_on:
+      - postgres
+      - timescaledb
+
+  # TimescaleDB Admin UI - using alternative image
+  adminer:
+    image: adminer:latest
+    container_name: ev-saas-adminer
+    ports:
+      - "8091:8080"
+    restart: unless-stopped
+    networks:
+      - ev-network
+    environment:
+      ADMINER_DEFAULT_SERVER: timescaledb
+      ADMINER_DEFAULT_USER: evsaas
+      ADMINER_DEFAULT_PASSWORD: evsaas_password
+      ADMINER_DEFAULT_DB: evsaas_timeseries_db
+    depends_on:
+      - timescaledb
+
+  ## Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: ev-saas-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - ev-network
+    command: redis-server --save 60 1 --loglevel warning
+
+  ## Service Discovery
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: ev-saas-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - ev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+    # Kafka and Zookeeper for event streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: ev-saas-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ev-network
+
+  # Kafka broker
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: ev-saas-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ev-network
+
+  ## Nginx Gateway (replaces API Gateway)
+  nginx:
+    image: nginx:alpine
+    container_name: ev-saas-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/docker/nginx/custom_nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/docker/nginx/http_config.conf:/etc/nginx/http_config.conf:ro
+      - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/docker/nginx/index.html:/usr/share/nginx/html/index.html:ro
+      - ./infra/docker/nginx/custom-swagger.html:/usr/share/nginx/html/custom-swagger.html:ro
+      - ./infra/docker/nginx/auth-swagger-test.html:/usr/share/nginx/html/auth-swagger-test.html:ro
+      - ./infra/docker/nginx/billing-swagger-test.html:/usr/share/nginx/html/billing-swagger-test.html:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - auth-service
+      - user-service
+      - station-service
+      - roaming-service
+      - billing-service
+      - smart-charging
+      - notification-service
+    networks:
+      - ev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  ## Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
+    container_name: ev-saas-auth
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8081
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      # Swagger Configuration
+      - SPRINGDOC_API_DOCS_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
+      - SPRINGDOC_API_DOCS_PATH=/api-docs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8081"
+
+  ## User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-user
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8084
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8084"
+
+  ## Billing Service
+  billing-service:
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-billing
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/evsaas_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/auth/realms/ev-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/auth/realms/ev-platform/protocol/openid-connect/certs
+      - TIMESCALE_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
+      - TIMESCALE_DATASOURCE_USERNAME=evsaas
+      - TIMESCALE_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8083
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Swagger Configuration
+      - SPRINGDOC_API_DOCS_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_ENABLED=true
+      - SPRINGDOC_SWAGGER_UI_PATH=/swagger-ui.html
+      - SPRINGDOC_API_DOCS_PATH=/v3/api-docs
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8083"
+      
+  ## Station Service (uses TimescaleDB for time-series data)
+  station-service:
+    build:
+      context: ./station-service
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_ARGS=clean package -DskipTests
+        - SPRING_PROFILES_ACTIVE=local
+    container_name: ev-saas-station
+    ports:
+      - "8089:8084"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://timescaledb:5432/evsaas_timeseries_db
+      - SPRING_DATASOURCE_USERNAME=evsaas
+      - SPRING_DATASOURCE_PASSWORD=evsaas_password
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVER_PORT=8084
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_SCHEMA_VALIDATION_ENABLED=false
+      - SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED=false
+      # Enable metrics and monitoring
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.path=/actuator/prometheus"
+      - "prometheus.port=8084"
+      
+  ## Scheduler Service
+  scheduler-service:
+    build:
+      context: ./scheduler-service
+      dockerfile: Dockerfile
+    container_name: ev-saas-scheduler
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - ev-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/e
+
