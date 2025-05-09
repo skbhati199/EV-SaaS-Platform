@@ -1,23 +1,20 @@
-FROM eclipse-temurin:17-jdk as builder
+FROM eclipse-temurin:17-jdk
+
 WORKDIR /app
-COPY . .
-RUN ./mvnw clean package -DskipTests
 
-FROM eclipse-temurin:17-jre
-WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+# Copy and compile SimpleHttpServer
+COPY src/main/java/com/ev/roamingservice/SimpleHttpServer.java /app/
+RUN mkdir -p /app/com/ev/roamingservice
+RUN javac -d . SimpleHttpServer.java
 
-# Set up an alternate entry point for SimpleHttpServer
-COPY src/main/java/com/ev/roamingservice/SimpleHttpServer.java /app/SimpleHttpServer.java
-RUN javac -d . /app/SimpleHttpServer.java
-
-# Default to Spring Boot application, but allow SimpleHttpServer to be used with environment variable
-ENV SPRING_PROFILES_ACTIVE=docker
-ENV SERVER_MODE=springboot
-
-# Create entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Set environment variables with default values
+ENV SERVER_PORT=8088
+ENV OCPI_EXTERNAL_URL=http://localhost:8088
+ENV OCPI_PARTY_ID=EVP
+ENV OCPI_COUNTRY_CODE=US
+ENV OCPI_ROLE=CPO
 
 EXPOSE 8088
-ENTRYPOINT ["/app/entrypoint.sh"] 
+
+# Run the SimpleHttpServer
+CMD ["java", "com.ev.roamingservice.SimpleHttpServer"]
